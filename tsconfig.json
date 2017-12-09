@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es5",
+    "declaration": true,
+    "jsx": "react",
+    "jsxFactory": "h",
+    "noImplicitAny": true,
+    "strict": true,
+    "outDir": "./dist",
+    "suppressImplicitAnyIndexErrors":true
+  },
+  "include": [
+    "src/**/*"
+  ]
+}
