@@ -9,12 +9,11 @@ But the library is new, small, and easy to modify, so consider copying the sourc
 
 Pickle is a small library for writing client-side web apps. Core features:
 
-* DRY
-* Tracked updates (for time travel debugging, transactions, undo/redo)
-* Serializable / Deserializable (e.g. can refresh and keep state)
-* Composable view functions & composable component classes
-* Virtual DOM (Picodom)
+* State Management (for time travel debugging, transactions, undo/redo, serialization, maintaining state on refresh)
+* Composable, inheritable component classes, with full control over update path
+* Pure view functions via a Virtual DOM (Picodom)
 * Typescript orientation
+* DRY as possible
 * Supports both code and tsx HTML syntax
 
 Let's start with a counter component:
@@ -164,11 +163,7 @@ You can also use a predicate to seek a particular state:
 time.seek(state => state.foo == 7)
 ```
 
-When time travel is on, for each update, pickle deep copies the previous state, using lodash's deepClone function.
-
-For debugging, you can leave it on, but for production, just use it for transactions or undo/redo scenarios.
-
-Avoid properties with large immutable objects, and instead indirectly reference them with a key. For example, instead of directly storing a localisation table of French data on your component, you'd merely store the string "fr", and return the localisation table based on that key. Minimize the state on your components to that which you need to respond to user actions; keep it as close to a state machine as possible.
+When time travel is on, pickle serializes the component tree on each update. It's fast and there's not too much you have to do, but make sure to read the serialization section.
 
 # Serialization
 
@@ -184,26 +179,28 @@ Our application is now persisted on each update. We can turn that on and off as 
 ```typescript
 app.saveOn = true/false
 ```
-This will save your data in local storage with the container id you specified (e.g `"app"`).
+This will save your serialied component tree in local storage with the container id you specified (e.g `"app"`).
 
 Pickle uses the `class-transformer` npm package to serialize and deserialize your component classes. Nested components need to be decorated as follows to deserialize correctly:
 
 ```typescript
 import { Type } from 'class-transformer'
 
-class MyComponent extends Component {
-   @Type (() => SettingsModal) settingsModal: SettingsModal
+class MyParent extends Component {
+   @Type (() => MyChild) child: MyChild
 ```
 
-It's a little bit of boilerplate, but you get peristence for free - the convenience outweighs the cost.
+It's a little bit of boilerplate but Typescript needs that type information.
 
 There's a couple of points to be aware of:
 
 1) Avoid circular references, as the serializer doesn't handle them. If you have to have them, reset them in your constructors. If possible, do without them. It reduces cyclomatic complexity which is why some languages like F# deliberately force you to minimize them. 
-2) Don't directly reference big immutable objects!
+2) Avoid properties with large immutable objects, and instead indirectly reference them with a key. For example, instead of directly storing a localisation table of French data on your component, you'd merely store the string "fr", and return the localisation table based on that key. Minimize the state on your components to that which you need to respond to user actions; keep it as close to a state machine as possible.
 
 You can also explicitly exclude particular properties from being serialized with this decorator:
+```typescript
 @Exclude() 
+```
 
 # Async
 

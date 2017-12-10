@@ -1,17 +1,14 @@
 ﻿import { App } from './app';
 import { div } from './html'
 import { VNode } from './dom'
-import { cloneDeep } from 'lodash'
 import { parseTyped, KeyValue } from './util'
-import { Exclude } from 'class-transformer'
-
-var serializing: boolean = false
+import { Exclude, classToPlain } from 'class-transformer'
 
 export abstract class Component
 {
     @Exclude() app?: () => App
-    parent?: Component    
-
+    @Exclude() parent?: Component    
+    
     constructor (parent?: Component)
     {
         this.parent = parent;
@@ -27,12 +24,9 @@ export abstract class Component
 
     update (updater: () => void, payload?: any)
     {
-        if (serializing)
-            return
-
         var root = this.root()
         var app = root.app ? root.app() : undefined
-        var clone: Component
+        var json: any
 
         try {
             if (app)
@@ -42,20 +36,7 @@ export abstract class Component
                 if (c.beforeUpdate && c.beforeUpdate (this, payload) === false)
                     return
 
-            if (app && app.isRecording)
-                clone = cloneDeep(root)  
-
             updater()
-
-            if (app) {
-                try {
-                    serializing = true 
-                    app.save()
-                }
-                finally {
-                    serializing = false
-                }
-            }
 
             for (var c of this.branch())
                 if (c.afterUpdate)
@@ -66,11 +47,8 @@ export abstract class Component
                 app.activeUpdates--
         }
 
-        if (app && app.activeUpdates == 0) {
-            if (app.isRecording)
-                app.record (clone!, root)
-            app.refresh()
-        }
+        if (app)
+            app.snapshot()
     }
 
     root() : Component {

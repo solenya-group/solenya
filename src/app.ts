@@ -1,7 +1,7 @@
 ﻿import { TimeTravel } from './timeTravel'
 import { Component } from './component'
 import { vnode, patch, VNode } from './dom'
-import { serialize, deserialize} from 'class-transformer'
+import { serialize, deserialize, plainToClass, classToPlain} from 'class-transformer'
 
 export class App 
 {
@@ -12,11 +12,11 @@ export class App
     private rootVNode: VNode<any>
 
     saveOn: boolean
-    time: TimeTravel<Component>
+    time: TimeTravel<any>
     isRecording = true    
-    activeUpdates = 0
+    activeUpdates = 0    
 
-    constructor (rootComponentConstructor: any, containerId: string, saveOn: boolean = false)
+    constructor (rootComponentConstructor : new() => Component, containerId: string, saveOn: boolean = false)
     {
         this.saveOn = saveOn
 
@@ -32,26 +32,29 @@ export class App
             this.rootComponent = new rootComponentConstructor()
         }        
 
-        this.container = document.getElementById (containerId)!
-
-        this.rootComponent.app = () => this
+        this.container = document.getElementById (containerId)!        
     
-        this.time = new TimeTravel<Component> (this.rootComponent, state => {
-            this.rootComponent = state
+        this.time = new TimeTravel<any> (state => {
+            this.rootComponent = <Component><any> plainToClass(rootComponentConstructor, state, {enableCircularCheck:true}  )
+            this.rootComponent.setParent (undefined)
+            this.rootComponent.app = () => this
             this.refresh()
         })
-
-        this.refresh()       
+    
+        this.rootComponent.app = () => this
+        this.snapshot()
     }
 
-    save () {
-        var s = serialize (this.rootComponent, { enableCircularCheck: true })                    
-        window.localStorage.setItem (this.container.id, s)
-    }
-
-    record (prev: Component, next: Component)
-    {
-        this.time.push (prev, next)
+    snapshot()
+    {        
+        if (this.isRecording && this.activeUpdates == 0)
+        {            
+            var json = classToPlain (this.rootComponent)
+            this.time.push (json)
+            if (this.saveOn)
+                window.localStorage.setItem (this.container.id, serialize (json))
+        }
+        this.refresh()
     }
 
     refresh ()

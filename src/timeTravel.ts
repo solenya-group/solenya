@@ -4,19 +4,14 @@
     cursor: number = 0
     setState: (state: T) => void
 
-    constructor (initialState: T, setState: (state: T) => void)
+    constructor (setState: (state: T) => void)
     {       
         this.setState = setState
-        this.states = [initialState]
     }
 
-    push (prev: T, next: T) {
-        if (this.cursor != this.states.length - 1)
-            this.states = this.states.slice (0, this.cursor + 1)
-
-        this.states = this.states.concat ([next])
+    push (obj: T) {
+        this.states = this.states.concat ([obj])
         this.cursor = this.states.length - 1
-        this.states[this.cursor-1] = prev
     }
 
     start() {
