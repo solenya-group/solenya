@@ -11,6 +11,7 @@ Pickle is a small library for writing client-side web apps. Core features:
 
 * DRY
 * Tracked updates (for time travel debugging, transactions, undo/redo)
+* Serializable / Deserializable (e.g. can refresh and keep state)
 * Composable view functions & composable component classes
 * Virtual DOM (Picodom)
 * Typescript orientation
@@ -169,6 +170,41 @@ When time travel is on, for each update, pickle deep copies the previous state, 
 For debugging, you can leave it on, but for production, just use it for transactions or undo/redo scenarios.
 
 Avoid properties with large immutable objects, and instead indirectly reference them with a key. For example, instead of directly storing a localisation table of French data on your component, you'd merely store the string "fr", and return the localisation table based on that key. Minimize the state on your components to that which you need to respond to user actions; keep it as close to a state machine as possible.
+
+# Serialization
+
+It's useful to be able to serialize your application to local storage. This means users can refresh without losing their data, which is also great during development.
+
+Indicate whether you want to save to local storage as we update, by passing a boolean value to the `App` constructor:
+
+```typescript
+var app = new App (Counter, "app", true)
+```
+Our application is now persisted on each update. We can turn that on and off as follows:
+
+```typescript
+app.saving = true/false
+```
+This will save your data in local storage with the container id you specified (e.g `"app"`).
+
+Pickle uses the `class-transformer` npm package to serialize and deserialize your component classes. Nested components need to be decorated as follows to deserialize correctly:
+
+```typescript
+import { Type } from 'class-transformer'
+
+class MyComponent extends Component {
+   @Type (() => SettingsModal) settingsModal: SettingsModal
+```
+
+It's a little bit of boilerplate, but you get peristence for free - the convenience outweighs the cost.
+
+There's a couple of points to be aware of:
+
+1) Avoid circular references, as the serializer doesn't handle them. If you have to have them, reset them in your constructors. If possible, do without them. It reduces cyclomatic complexity which is why some languages like F# deliberately force you to minimize them. 
+2) Don't directly reference big immutable objects!
+
+You can also explicitly exclude particular properties from being serialized with this decorator:
+@Exclude() 
 
 # Async
 

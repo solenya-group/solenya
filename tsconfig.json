@@ -8,7 +8,9 @@
     "noImplicitAny": true,
     "strict": true,
     "outDir": "./dist",
-    "suppressImplicitAnyIndexErrors":true
+    "suppressImplicitAnyIndexErrors":true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": [
     "src/**/*"

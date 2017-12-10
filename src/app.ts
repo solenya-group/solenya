@@ -1,6 +1,7 @@
 ﻿import { TimeTravel } from './timeTravel'
 import { Component } from './component'
 import { vnode, patch, VNode } from './dom'
+import { serialize, deserialize} from 'class-transformer'
 
 export class App 
 {
@@ -10,16 +11,30 @@ export class App
     private rootElement: Element
     private rootVNode: VNode<any>
 
+    saveOn: boolean
     time: TimeTravel<Component>
     isRecording = true    
     activeUpdates = 0
 
-    constructor (rootComponent: Component, containerId: string)
+    constructor (rootComponentConstructor: any, containerId: string, saveOn: boolean = false)
     {
-        this.rootComponent = rootComponent
+        this.saveOn = saveOn
+
+        if (! saveOn)
+            window.localStorage.removeItem(containerId)
+        
+        var persisted = window.localStorage.getItem(containerId)
+        if (persisted != null) {
+            this.rootComponent = <Component>deserialize (rootComponentConstructor, persisted)
+            this.rootComponent.setParent(undefined)
+        }
+        else {
+            this.rootComponent = new rootComponentConstructor()
+        }        
+
         this.container = document.getElementById (containerId)!
 
-        rootComponent.app = () => this
+        this.rootComponent.app = () => this
     
         this.time = new TimeTravel<Component> (this.rootComponent, state => {
             this.rootComponent = state
@@ -27,6 +42,11 @@ export class App
         })
 
         this.refresh()       
+    }
+
+    save () {
+        var s = serialize (this.rootComponent, { enableCircularCheck: true })                    
+        window.localStorage.setItem (this.container.id, s)
     }
 
     record (prev: Component, next: Component)
