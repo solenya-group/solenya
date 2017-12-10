@@ -131,11 +131,10 @@ View methods return the type VNode<any> and be written is ordinary code or use t
 
 # App
 
-To start Pickle, you first create your top level component, and then you pass it into your App instance, with a string defining the id of the element where you app will be hosted. For example:
+To start Pickle, pass the constructor of your top level component into your App instance, with a string defining the id of the element where you app will be hosted. For example:
 
 ```typescript
-var counter = new Counter()
-var app = new App (counter, "app")
+var app = new App (Counter, "app")
 ```
 
 You can access the app's `time` property to perform time travel.
@@ -183,7 +182,7 @@ var app = new App (Counter, "app", true)
 Our application is now persisted on each update. We can turn that on and off as follows:
 
 ```typescript
-app.saving = true/false
+app.saveOn = true/false
 ```
 This will save your data in local storage with the container id you specified (e.g `"app"`).
 
@@ -372,3 +371,14 @@ To give an example, a slider has a state, but its suffice to have a `slider` fun
 slider (() => this.height, 100, 250, 1, e => this.updateProperty (e))
 ```
 On the other hand, a modal dialog, while also having little state (just a single boolean flag whether its open or not), actually has non-trivial logic around that state. By implementing the modal as a component, every component that uses the modal can get the state logic for free.
+
+# Use With...
+## HTML History
+https://github.com/ReactTraining/history
+
+You'll want to keep your component's state in sync with the history.
+
+## Validation
+https://github.com/typestack/class-validator
+
+You'll want to sprinkle your component's properties with validate decorators, and then override the `afterUpdate` method to call `validate`.
