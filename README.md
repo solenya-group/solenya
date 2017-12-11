@@ -5,6 +5,9 @@ You can use npm:
 
 But the library is new, small, and easy to modify, so consider copying the source files to your own project, and then modifying it to suit your own needs.
 
+Samples here:
+https://github.com/pickle-ts/pickle-samples
+
 # Intro to Pickle
 
 Pickle is a small library for writing client-side web apps. Core features:
@@ -130,9 +133,12 @@ View methods return the type VNode<any> and be written is ordinary code or use t
 
 # App
 
-To start Pickle, pass the constructor of your top level component into your App instance, with a string defining the id of the element where you app will be hosted. For example:
+To start Pickle, pass the constructor of your top level component into your App instance, with a string defining the id of the element where you app will be hosted. You must also import `reflect-metadata` before any of your classes are loaded. For example:
 
 ```typescript
+import 'reflect-metadata'
+import { App } from 'pickle-ts'
+
 var app = new App (Counter, "app")
 ```
 
@@ -177,7 +183,7 @@ var app = new App (Counter, "app", true)
 Our application is now persisted on each update. We can turn that on and off as follows:
 
 ```typescript
-app.saveOn = true/false
+app.saveOn = true|false
 ```
 This will save your serialied component tree in local storage with the container id you specified (e.g `"app"`).
 
@@ -215,6 +221,8 @@ Pickle's update path is synchronous, so you perform aynchronous activites outsid
     }
 ```
 Notice that the `update` occurs *after* the asynchronous operation has completed.
+
+Note that the samples demonstrate calling github's search, with debouncing.
 
 # 'this' Rules
 
@@ -344,9 +352,9 @@ export class BMISlider extends Component
 
     view () {       
         return div (             
-            "height", slider (() => this.height, 100, 250, 1, e => this.updateProperty (e)),
-            "weight", slider (() => this.weight, 30, 150, 1, e => this.updateProperty (e)),
-            "bmi: " + this.calc()
+            div ("height", slider (() => this.height, 100, 250, 1, e => this.updateProperty (e)), this.height),
+            div ("weight", slider (() => this.weight, 30, 150, 1, e => this.updateProperty (e)), this.weight),
+            div ("bmi: " + this.calc())
         )
     }
 }
@@ -354,7 +362,7 @@ export class BMISlider extends Component
 
 The `updateProperty` callback takes a `KeyValue` object, where they key maps to the Component property, and value the new value of the property. `updateProperty` calls `update` for you, but you can always intercept that update by calling `beforeUpdate` as explained earlier.
 
-One caveat: if the property type in a number, make sure to set it to `NaN` in the field initialiser if you don't yet know the value, otherwise it's impossible for `updateProperty` to know its dealing with a number, and will default to setting that value to a string.
+**Always initialise the property**. This lets pickle know what type it's supposed to be. To represent non-existent values, initialise with `""` for strings, and `NaN` for numbers.
 
 # Components or Functions?
 
