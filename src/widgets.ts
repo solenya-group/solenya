@@ -23,7 +23,9 @@ export const commandLink = (click: () => void, content: any, attrs?: any) =>
 export const inputer = (propertyAccess: () => any, inputAction: (propertyChange: KeyValue) => any, attrs?: any) =>    
     input(
         {
-            value: Let (propertyAccess(), value => isNaN (value) ? "" : value),
+            value: Let(propertyAccess(), value =>
+                typeof value === "number" && isNaN (value) ? "" : value
+            ),   
             oninput: (e: Event) => inputAction({
                 key: key(propertyAccess),
                 value: (<HTMLInputElement>e.target).value

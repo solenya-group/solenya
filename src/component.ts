@@ -24,10 +24,9 @@ export abstract class Component
 
     update (updater: () => void, payload?: any)
     {
-        var root = this.root()
-        var app = root.app ? root.app() : undefined
-        var json: any
-
+        const root = this.root()
+        const app = root.app ? root.app() : undefined
+        
         try {
             if (app)
                 app.activeUpdates++

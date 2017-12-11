@@ -204,7 +204,7 @@ You can also explicitly exclude particular properties from being serialized with
 
 # Async
 
-Pickle's update path is synchronous, so you perform aynchronous activites outside of update. Suppose a button invokes your submit event handler that calls a web service. That could be defined as follows: 
+Pickle's update path is synchronous, so you perform aynchronous activites outside of update. Suppose a button invokes your submit event handler that calls a web service. That could be defined as ollows: 
 
 ```typescript
     async submit () {
