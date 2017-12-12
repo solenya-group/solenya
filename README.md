@@ -12,7 +12,7 @@ https://github.com/pickle-ts/pickle-samples
 
 Pickle is a small library for writing client-side web apps. Core features:
 
-* State Management (for time travel debugging, transactions, undo/redo, serialization, maintaining state on refresh)
+* Serializable Application State - unified approach to time travel debugging, hot module reloading, transactions, undo/redo
 * Composable, inheritable component classes, with full control over update path
 * Pure view functions via a Virtual DOM (Picodom)
 * Typescript orientation
@@ -151,7 +151,7 @@ Maintaining state history is useful when you want transactions, undo/redo, and t
 You can turn time travel on and off through the time object on App:
 
 ```typescript
-time.recording = true
+time.recordOn = true
 ```
 Now all updates will be recorded.
 
@@ -166,7 +166,7 @@ time.goto(4)  // goto nth state
 ```
 You can also use a predicate to seek a particular state:
 ```typescript
-time.seek(state => state.foo == 7)
+time.seek(state => state.counter.count == 7)
 ```
 
 When time travel is on, pickle serializes the component tree on each update. It's fast and there's not too much you have to do, but make sure to read the serialization section.
@@ -186,6 +186,11 @@ Our application is now persisted on each update. We can turn that on and off as 
 app.saveOn = true|false
 ```
 This will save your serialied component tree in local storage with the container id you specified (e.g `"app"`).
+
+To clear your application state:
+```typescript
+localStorage.removeItem ("app")
+```
 
 Pickle uses the `class-transformer` npm package to serialize and deserialize your component classes. Nested components need to be decorated as follows to deserialize correctly:
 
@@ -208,6 +213,14 @@ You can also explicitly exclude particular properties from being serialized with
 @Exclude() 
 ```
 
+# Hot Module Reloading
+
+When your application state is serialized, an ordinary page refresh will run your modified code with your previous state. We can automatically trigger a page refresh by listening to server code changes:
+
+```typescript
+module.hot.accept('../app/samples', () => { location.reload() })
+
+```
 # Async
 
 Pickle's update path is synchronous, so you perform aynchronous activites outside of update. Suppose a button invokes your submit event handler that calls a web service. That could be defined as ollows: 

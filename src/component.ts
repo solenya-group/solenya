@@ -46,8 +46,10 @@ export abstract class Component
                 app.activeUpdates--
         }
 
-        if (app)
-            app.snapshot()
+        if (app) {  
+           app.snapshot()
+           app.refresh()
+        }
     }
 
     root() : Component {

@@ -12,8 +12,8 @@ export class App
     private rootVNode: VNode<any>
 
     saveOn: boolean
-    time: TimeTravel<any>
-    isRecording = true    
+    recordOn = true
+    time: TimeTravel<any>    
     activeUpdates = 0    
 
     constructor (rootComponentConstructor : new() => Component, containerId: string, saveOn: boolean = false)
@@ -43,18 +43,18 @@ export class App
     
         this.rootComponent.app = () => this
         this.snapshot()
+        this.refresh()
     }
 
     snapshot()
     {        
-        if (this.isRecording && this.activeUpdates == 0)
+        if (this.recordOn && this.activeUpdates == 0)
         {            
             var json = classToPlain (this.rootComponent)
             this.time.push (json)
             if (this.saveOn)
                 window.localStorage.setItem (this.container.id, serialize (json))
-        }
-        this.refresh()
+        }        
     }
 
     refresh ()

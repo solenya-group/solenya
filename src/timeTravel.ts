@@ -1,7 +1,7 @@
 ﻿export class TimeTravel<T>
 {
     states: T[] = []
-    cursor: number = 0
+    cursor: number = -1
     setState: (state: T) => void
 
     constructor (setState: (state: T) => void)
@@ -10,6 +10,8 @@
     }
 
     push (obj: T) {
+        if (this.cursor != this.states.length - 1)
+            this.states = this.states.slice (0, this.cursor + 1)
         this.states = this.states.concat ([obj])
         this.cursor = this.states.length - 1
     }
