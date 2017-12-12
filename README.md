@@ -1,19 +1,40 @@
 # Installation
 
-You can use npm:
 `npm install pickle-ts`
 
-But the library is new, small, and easy to modify, so consider copying the source files to your own project, and then modifying it to suit your own needs.
+The library is new, small, and easy to modify, so consider copying the source files to your own project, and then modifying it to suit your own needs.
 
-Samples here:
+# Samples
+
 https://github.com/pickle-ts/pickle-samples
+
+# Table of Contents
+
+- [Intro to Pickle](#)
+- [State, View and Updates](#)
+- [Composition](#)
+- [Updates](#)
+- [Views](#)
+- [App](#)
+- [Time Travel](#)
+- [Serialization](#)
+- [Hot Module Reloading](#)
+- [Async](#)
+- ['this' Rules](#)
+- [HTML Helpers](#)
+- [TSX](#)
+- [Forms](#)
+- [Components or Functions?](#)
+- [Use With...](#)
+	- [HTML History](#)
+	- [Validation](#)
 
 # Intro to Pickle
 
 Pickle is a small library for writing client-side web apps. Core features:
 
-* Serializable Application State - unified approach to time travel debugging, hot module reloading, transactions, undo/redo
-* Composable, inheritable component classes, with full control over update path
+* Serializable, Composable, Inheritable Components
+* Unified approach to time travel debugging, hot module reloading, transactions, undo/redo
 * Pure view functions via a Virtual DOM (Picodom)
 * Typescript orientation
 * DRY as possible
@@ -39,11 +60,11 @@ export class Counter extends Component
     }
 }
 ```
-The `view` is written in the functional style: it's a pure function of the state of `Counter`. The view is rendered with a virtual DOM, such that the real DOM is efficiently patched with only the changes since the last update.
+Components can have state — in this case `count`.
 
-`add` is a method that calls `update` to perform a state transition.
+Components have a `view` method, which is a pure non side effecting function of the component's state. Views are rendered with a virtual DOM, such that the real DOM is efficiently patched with only the changes since the last update.
 
-All state transitions must occur within an `update`, which will refresh the view.
+Components update their state exclusively via the their `update` method, which will automatically refresh the view.
 
 # State, View and Updates
 
@@ -57,7 +78,7 @@ The `Component` class handles this cyclic relationship.
 
 `Component` also handles component composition.
 
-Pickle can track updates. Like with source control mechanisms, this lets you recreate a previous state.
+Pickle components are designed to be serializable. By default, your component tree is serialized on each update. This provides a unified approach to time travel debugging, hot module reloading, transactions, and undo/redo. Serialization is covered in more detail in the serialization section.
 
 # Composition
 
@@ -80,6 +101,12 @@ export class TwinCounters extends Component
 All components — apart from your root component — are constructed with a parent component.
 
 Child components should be created in the constructors, field initialisers, and updates of their parents.
+
+To enable serialization, we should decorate our child component properties (more on that in the serialization section).
+ 
+```typescript
+@Type (() => Counter) counter1...
+```
 
 # Updates
 
@@ -119,7 +146,7 @@ If updates are nested the view method will only be called once.
 
 Views are pure functions of state. Pickle uses a virtual DOM (Picodom) to efficiently update the actual DOM.
 
-The root component must have a parameterless `view` method. In contrast, all child component views are called explicitly, so are free to parameterise their views however they want:
+You can add as may optional parameters as you want to your child component `View` methods. This makes it easy for parents to customize their children without their children needing state:
 
 ```typescript
     view () {
@@ -143,6 +170,8 @@ var app = new App (Counter, "app")
 ```
 
 You can access the app's `time` property to perform time travel.
+
+You can also construct your app to automatically save to local storage on each update, as explained in the serialization section.
 
 # Time Travel
 
