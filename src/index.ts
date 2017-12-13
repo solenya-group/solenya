@@ -1,5 +1,6 @@
 ﻿export { Component } from './component'
 export { App } from './app'
+export { TimeTravel } from './timeTravel'
 export { VNode, merge } from './dom'
 export { css, literal, KeyValue, isNullOrEmpty, key, Let } from './util'
 export { selector, commandButton, commandLink, inputer, labeledInput, slider, radioGroup } from './widgets'

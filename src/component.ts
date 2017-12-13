@@ -18,28 +18,29 @@ export abstract class Component
         return div ((<any>this.constructor).name)
     }
 
-    beforeUpdate? (source: Component, payload?: any) : boolean
+    beforeUpdate? (payload?: any) : boolean
 
-    afterUpdate? () : void
+    afterUpdate? (payload?: any) : void
 
-    update (updater: () => void, payload?: any)
+    update(updater: () => void, payload: any = {})
     {
         const root = this.root()
         const app = root.app ? root.app() : undefined
+        payload.source = this
         
         try {
             if (app)
                 app.activeUpdates++
 
             for (var c of this.branch())
-                if (c.beforeUpdate && c.beforeUpdate (this, payload) === false)
+                if (c.beforeUpdate && c.beforeUpdate (payload) === false)
                     return
 
             updater()
 
             for (var c of this.branch())
                 if (c.afterUpdate)
-                    c.afterUpdate()
+                    c.afterUpdate (payload)
         }
         finally {
             if (app)

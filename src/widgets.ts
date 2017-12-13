@@ -1,5 +1,5 @@
 import { VNode, VProps } from './dom'
-import { button, h1, main, input, select, option, div, label, span, br, a } from './html'
+import { button, input, select, option, div, label, span, br, a } from './html'
 import { KeyValue, key, PropertyName, propertyName, Let, fuzzyEquals } from './util'
 
 export const commandButton = (click: () => void, content: any, attrs?: any) => 
@@ -110,13 +110,13 @@ export const radioGroup =
                     value: pair[0],
                     name: key (propertyAccess),
                     type: "radio",
-                    checked: fuzzyEquals(pair[0], propertyAccess()) ? "selected" : undefined,
+                    checked: fuzzyEquals(pair[0], propertyAccess()) ? "checked" : undefined,
                     onchange: (e: Event) => checkedAction ({
                         key: key (propertyAccess),
                         value: (<HTMLInputElement>e.target).value
                     }),
                     onupdate: (element: HTMLInputElement, props?: VProps) => {
-                            // element.checked = element.getAttribute ("checked") == "checked";
+                        element.checked = element.getAttribute ("checked") == "checked"
                     }
                 }),
                 pair[1],

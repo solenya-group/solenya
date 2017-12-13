@@ -13,18 +13,22 @@ https://github.com/pickle-ts/pickle-samples
 - [Intro to Pickle](#)
 - [State, View and Updates](#)
 - [Composition](#)
+- [Forms](#)
 - [Updates](#)
+	- [Advanced Updates](#)
 - [Views](#)
 - [App](#)
 - [Time Travel](#)
 - [Serialization](#)
+    - [Circular references](#)
+    - [Keep your component state small](#)
 - [Hot Module Reloading](#)
 - [Async](#)
 - ['this' Rules](#)
 - [HTML Helpers](#)
 - [TSX](#)
-- [Forms](#)
 - [Components or Functions?](#)
+- [Task List App](#)
 - [Use With...](#)
 	- [HTML History](#)
 	- [Validation](#)
@@ -82,13 +86,15 @@ Pickle components are designed to be serializable. By default, your component tr
 
 # Composition
 
-Composition is straightforward with `pickle`, allowing you to factor your application into a tree of smaller components:
+Composition is straightforward with `pickle`, allowing you to factor your application into a tree of smaller components.
+
+A slight drawback from a DRY perspective is that you have to explcitly provide repetitious type information, but the repetition is contiguous (not separated), and statically typed (so renaming the type in a modern IDE is a single operation).
 
 ```typescript
 export class TwinCounters extends Component
 {
-    counter1: Counter = new Counter (this)
-    counter2: Counter = new Counter (this)
+    @Type (() => Counter) counter1 = new Counter (this)
+    @Type (() => Counter) counter2 = new Counter (this)
 
     view () {
         return div (
@@ -102,11 +108,43 @@ All components — apart from your root component — are constructed with a par
 
 Child components should be created in the constructors, field initialisers, and updates of their parents.
 
-To enable serialization, we should decorate our child component properties (more on that in the serialization section).
- 
+The `@Type` decorator enables your component classes to be deserialized from plain json objects. It's necessary as **Typescript transpiles away property types** (unlike in C# or Java).
+
+# Forms
+
+To make writing forms easier, pickle provides some widget functions for common inputs, and provides an `updateProperty` callback for updating properties in the `Component`. In this example, we write a BMI component with two sliders:
+
 ```typescript
-@Type (() => Counter) counter1...
+export class BMI extends Component
+{
+    height: number = 180
+    weight: number = 80
+
+    calc () {
+        return this.weight / (this.height * this.height / 10000)
+    }
+
+    view () {       
+        return div (             
+            div (
+                "height",
+                slider (() => this.height, 100, 250, 1, e => this.updateProperty (e)),
+                this.height
+            ),
+            div (
+                "weight",
+                slider (() => this.weight, 30, 150, 1, e => this.updateProperty (e)),
+                this.weight
+            ),
+            div ("bmi: " + this.calc())
+        )
+    }
+}
 ```
+
+The `updateProperty` callback takes a `KeyValue` argument, which has a key and value that map to the Component property name and new value. `updateProperty` calls through to the component's `update` for you, which is explained in the next section.
+
+**Always initialise component number fields, using NaN rather than undefined**. This is because **Typescript transpiles away property types**, meaning that pickle can't know whether it's dealing with a string or number, and assumes an undefined value is a string by default, in the absence of a runtime value.
 
 # Updates
 
@@ -117,30 +155,48 @@ All state transitions must occur in a constructor, or via an update:
         return this.update(() => this.count += x) 
     }
 ```
-You can call `update` without parameters. However, `update` optionally takes a `payload` argument. This is useful to let a component or parent component cancel the update.
+You pass `update` a void function that performs a state transition.
 
-Override `beforeUpdate` to prepare for or cancel an update (by returning `false`):
+A component usually updates its state by directly handling callbacks. We did that in the previous section, with our BMI component updating its state in response to a slider callback with component's `updateProperty` handler. A common pattern is to provide a custom callback in order to perform an additional state change after a property update:
+
+```typescript
+    handleSomePropertyChange (payload: KeyValue) {
+        this.update(() => {
+            this.updateProperty (payload)
+            // perform some additional state change
+        })
+    }
+```
+At the end of an update, the root component's `view` method is called. Updates are synchronous, but views are refreshed asynchronously.
+
+Nested updates are regarded as a single update. The view will at most be called once for an update.
+
+## Advanced Updates
+
+Occasionally it's useful to generically handle any update to a component, including all its descendents. That can be done by overriding the `beforeUpdate` and `afterUpdate` methods.
+
+Override `beforeUpdate` to prepare for or cancel any update (by returning `false`):
 
 ```typescript 
-   beforeUpdate (source: Component, payload?: any) {
+   beforeUpdate (payload?: any) {
        // return true to go ahead with update
        // return false to cancel update
    }
 ```
 
-Override `afterUpdate` to respond to an update, performing any final state modifications before the view is redrawn:
+Override `afterUpdate` to respond to any update, performing any final state modifications before the view is redrawn:
 
 ```typescript
-   afterUpdate() {
+   afterUpdate (payload?: any) {
       ...
    }
 ```
 
-Both `beforeUpdate` and `afterUpdate` are called on an update, from child through the root. This allows a parent to control and respond to updates made by its children.
+Both `beforeUpdate` and `afterUpdate` are called on an update, from child through the root. This allows a parent to control and respond to updates made by its children, without having to handle specific callbacks.
 
-At the end of an update, the root component's `view` method is called.
+`payload` is an optional argument that describes the change. `payload` is typed `any` for convenience, but has a `source` property of type `Component`, since its occassionally useful to know which component initiated the update.
 
-If updates are nested the view method will only be called once.
+Where does `payload` come from? Component's `update` method actually takes an optional second argument — `payload` — for describing the update. For example, Component's `updateProperty` method, when calling through to `update`, supplies a payload with a `key` and `value`, which correspond to the component property name and value.
 
 # Views
 
@@ -198,7 +254,7 @@ You can also use a predicate to seek a particular state:
 time.seek(state => state.counter.count == 7)
 ```
 
-When time travel is on, pickle serializes the component tree on each update. It's fast and there's not too much you have to do, but make sure to read the serialization section.
+When time travel is on, pickle serializes the component tree on each update. It's efficient and mostly transparent, but make sure to read the serialization section.
 
 # Serialization
 
@@ -230,17 +286,22 @@ class MyParent extends Component {
    @Type (() => MyChild) child: MyChild
 ```
 
-It's a little bit of boilerplate but Typescript needs that type information.
+As mentioned previously, that's a little bit of boilerplate but Typescript needs that type information.
+
+When deserializing, as a result of time travel or loading from local storage, your constructors will execute, and then your component's fields will be set.
 
 There's a couple of points to be aware of:
 
-1) Avoid circular references, as the serializer doesn't handle them. If you have to have them, reset them in your constructors. If possible, do without them. It reduces cyclomatic complexity which is why some languages like F# deliberately force you to minimize them. 
-2) Avoid properties with large immutable objects, and instead indirectly reference them with a key. For example, instead of directly storing a localisation table of French data on your component, you'd merely store the string "fr", and return the localisation table based on that key. Minimize the state on your components to that which you need to respond to user actions; keep it as close to a state machine as possible.
+## Circular references
 
-You can also explicitly exclude particular properties from being serialized with this decorator:
-```typescript
-@Exclude() 
-```
+Avoid circular references unless you absolutely need them. Firstly, the serializer doesn't handle them, and secondly, it increases your cyclomatic complexity which is why some languages like F# deliberately force you to minimize them. However, occassionaly you'll need them. To do so:
+
+* override component's `setParent` method, which is called immediately after deserialization, call `super.setParent()`, and then set your circular references
+* exclude them from being serialized with the `@Exclude()` decorator
+
+## Keep your component state small
+
+Serialization, deserialization, and local storage are surpisingly fast. However, efficiency is still important. Avoid properties with large immutable objects, and instead indirectly reference them with a key. For example, instead of directly storing a localisation table of French data on your component, you'd merely store the string "fr", and return the localisation table based on that key. Minimize the state on your components to that which you need to respond to user actions; keep it as close to a state machine as possible.
 
 # Hot Module Reloading
 
@@ -378,34 +439,6 @@ declare global {
     }
 }
 ```
-# Forms
-
-To make writing forms easier, pickle provides some widget functions for common inputs, and provides an `updateProperty` callback for updating properties in the `Component`. In this example, we write a BMI component with two sliders:
-
-```typescript
-export class BMISlider extends Component
-{
-    height: number = 180
-    weight: number = 80
-
-    calc () {
-        return this.weight / (this.height * this.height / 10000)
-    }
-
-    view () {       
-        return div (             
-            div ("height", slider (() => this.height, 100, 250, 1, e => this.updateProperty (e)), this.height),
-            div ("weight", slider (() => this.weight, 30, 150, 1, e => this.updateProperty (e)), this.weight),
-            div ("bmi: " + this.calc())
-        )
-    }
-}
-```
-
-The `updateProperty` callback takes a `KeyValue` object, where they key maps to the Component property, and value the new value of the property. `updateProperty` calls `update` for you, but you can always intercept that update by calling `beforeUpdate` as explained earlier.
-
-**Always initialise the property**. This lets pickle know what type it's supposed to be. To represent non-existent values, initialise with `""` for strings, and `NaN` for numbers.
-
 # Components or Functions?
 
 You can write reusable UI code simply writing functions that return virtual DOM nodes, or by deriving from `Component` class. Which to use?
@@ -418,6 +451,49 @@ To give an example, a slider has a state, but its suffice to have a `slider` fun
 slider (() => this.height, 100, 250, 1, e => this.updateProperty (e))
 ```
 On the other hand, a modal dialog, while also having little state (just a single boolean flag whether its open or not), actually has non-trivial logic around that state. By implementing the modal as a component, every component that uses the modal can get the state logic for free.
+
+# Task List App
+It's common for client-side web frameworks to demonstrate how they'd write a task app. Here's how you write one in pickle:
+
+```typescript
+export class Todos extends Component
+{    
+    title: string
+    list: string[] = []
+
+    add () {
+        this.update(() => {            
+            this.list = this.list.concat (this.title!)
+            this.title = undefined
+        })
+    }
+
+    delete (task: string) {
+        this.update (() =>
+            this.list = this.list.filter (t => t != task)
+        )
+    }
+
+    view () {
+        return div (
+            inputer (() => this.title, e => this.updateProperty (e)),
+            ! this.title ? undefined : commandButton (() => this.add(), 'Add'),
+            ul (
+                this.list.map (task =>
+                    li (
+                        task,
+                        commandButton (() => this.delete (task), "delete")
+                    )
+                )
+            )
+        )
+    }
+}
+```
+Notes:
+* Keep things simple! Only write components if they need to manage their own state. In this case, we didn't need a sub component for an individual task.
+* In a real application, we'd probably have a unique key associated with each todo item, rather than identifying the todo item by name.
+* Try customizing the css. Import the `css` function from pickle, and pass in your css class names. Then pass that css object as an additional argument to `commandButton`.
 
 # Use With...
 ## HTML History

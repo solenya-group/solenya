@@ -1,6 +1,6 @@
 ﻿export type KeyValue = {
-    key: string;
-    value: string
+    key: string
+    value?: string
 }
 
 export type PropertyName = string | (() => any)
@@ -12,21 +12,29 @@ export const key = (propertyAccess: () => any) =>
     (""+propertyAccess).match (/\.(.*);/)![1]
 
 export const fuzzyEquals = (x: any, y: any) =>
-    x == y || (typeof(x) == "string" && parseFloat(x) == parseFloat(y))
+    x == y ||
+    isNullOrEmpty (x) && isNullOrEmpty (y) ||
+    (typeof(x) == "string" && typeof(y) == "string" && (parseFloat(x) == parseFloat(y)))
 
 export const literal = (html: string) =>
     (element: Element) => {element.innerHTML = html};
 
-export const parseTyped = (s: string, guideValue: any) =>
-    guideValue.constructor.toString().indexOf ("Number") != -1 ? parseFloat (s) :
-    guideValue.constructor.toString().indexOf ("Boolean") != -1 ? Boolean (s) :
-    s;
+export function parseTyped (s: string|undefined, guideValue: any) {
+    if (s == null || guideValue == null)       
+        return s
+    var type = guideValue.constructor.toString()
+    if (type.indexOf ("Number") != -1)
+        return parseFloat (s)
+    if (type.indexOf ("Boolean") != -1)
+        return Boolean (s)
+    return s
+}
 
 export const Let = <T, U>(obj: T, op: (x: T) => U) =>
     op(obj)
 
 export const isNullOrEmpty = (s?:string|null) =>
-    s === null || s === ''
+    s == null || s === ''
 
 export type CssType = string|null|undefined
 
