@@ -15,6 +15,8 @@ https://github.com/pickle-ts/pickle-samples
 - [Intro to Pickle](#intro-to-pickle)
 - [State, View and Updates](#state--view-and-updates)
 - [Composition](#composition)
+  * [How it Works](#how-it-works)
+  * [The @Type Decorator](#the-type-decorator)
 - [Forms](#forms)
 - [Updates](#updates)
   * [Advanced Updates](#advanced-updates)
@@ -88,15 +90,13 @@ Pickle components are designed to be serializable. By default, your component tr
 
 # Composition
 
-Composition is straightforward with `pickle`, allowing you to factor your application into a tree of smaller components.
-
-A slight drawback from a DRY perspective is that you have to explcitly provide repetitious type information, but the repetition is contiguous (not separated), and statically typed (so renaming the type in a modern IDE is a single operation).
+Composition is straightforward with `pickle`, allowing you to factor your application into a tree of smaller components:
 
 ```typescript
 export class TwinCounters extends Component
 {
-    @Type (() => Counter) counter1 = new Counter (this)
-    @Type (() => Counter) counter2 = new Counter (this)
+    @Type (() => Counter) counter1 = new Counter ()
+    @Type (() => Counter) counter2 = new Counter ()
 
     view () {
         return div (
@@ -106,11 +106,17 @@ export class TwinCounters extends Component
     }
 }
 ```
-All components — apart from your root component — are constructed with a parent component.
+Components must have parameterless constructors, though they may include *optional* arguments.
 
 Child components should be created in the constructors, field initialisers, and updates of their parents.
 
-The `@Type` decorator enables your component classes to be deserialized from plain json objects. It's necessary as **Typescript transpiles away property types** (unlike in C# or Java).
+## How it Works
+
+After the root component is created, it's attached to the `App` object. Attaching the root will traverse the component hierarchy so that each child has its `parent` property set. This enables updates to a child to bubble up to the root component, which triggers the `App` to refresh, which will then call the root component's `view` method.
+
+## The @Type Decorator
+
+The `@Type` decorator from the `class-transformer` library enables your component classes to be deserialized from plain json objects. It's necessary as **Typescript transpiles away property types** (unlike in C# or Java).
 
 # Forms
 
@@ -146,7 +152,7 @@ export class BMI extends Component
 
 The `updateProperty` callback takes a `KeyValue` argument, which has a key and value that map to the Component property name and new value. `updateProperty` calls through to the component's `update` for you, which is explained in the next section.
 
-**Always initialise component number fields, using NaN rather than undefined**. This is because **Typescript transpiles away property types**, meaning that pickle can't know whether it's dealing with a string or number, and assumes an undefined value is a string by default, in the absence of a runtime value.
+**Always initialise component number fields explicitly, and use NaN rather than undefined**. This is because **Typescript transpiles away property types**, meaning that pickle can't know whether it's dealing with a string or number, and assumes an undefined value is a string by default, in the absence of a runtime value.
 
 # Updates
 
@@ -298,8 +304,8 @@ There's a couple of points to be aware of:
 
 Avoid circular references unless you absolutely need them. Firstly, the serializer doesn't handle them, and secondly, it increases your cyclomatic complexity which is why some languages like F# deliberately force you to minimize them. However, occassionaly you'll need them. To do so:
 
-* override component's `setParent` method, which is called immediately after deserialization, call `super.setParent()`, and then set your circular references
-* exclude them from being serialized with the `@Exclude()` decorator
+* override component's `afterAttached` method, which is called immediately after construction & deserialization, and set the circular references there
+* exclude the circular references from being serialized with the `@Exclude()` decorator
 
 ## Keep your component state small
 

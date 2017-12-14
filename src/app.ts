@@ -24,24 +24,20 @@ export class App
             window.localStorage.removeItem(containerId)
         
         var persisted = window.localStorage.getItem(containerId)
-        if (persisted != null) {
-            this.rootComponent = <Component>deserialize (rootComponentConstructor, persisted)
-            this.rootComponent.setParent(undefined)
-        }
-        else {
-            this.rootComponent = new rootComponentConstructor()
-        }        
+        if (persisted != null)
+            this.rootComponent = <Component>deserialize (rootComponentConstructor, persisted)        
+        else 
+            this.rootComponent = new rootComponentConstructor()           
 
         this.container = document.getElementById (containerId)!        
     
         this.time = new TimeTravel<any> (state => {
             this.rootComponent = <Component><any> plainToClass(rootComponentConstructor, state, {enableCircularCheck:true}  )
-            this.rootComponent.setParent (undefined)
-            this.rootComponent.app = () => this
+            this.rootComponent.setApp (this)
             this.refresh()
         })
     
-        this.rootComponent.app = () => this
+        this.rootComponent.setApp (this)
         this.snapshot()
         this.refresh()
     }

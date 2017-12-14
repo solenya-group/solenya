@@ -2,54 +2,65 @@ import { VNode, VProps } from './dom'
 import { button, input, select, option, div, label, span, br, a } from './html'
 import { KeyValue, key, PropertyName, propertyName, Let, fuzzyEquals } from './util'
 
-export const commandButton = (click: () => void, content: any, attrs?: any) => 
-    button (
+export function commandButton(click: () => void, content: any, attrs?: any) { 
+    return button (
         {
             onclick: (e: Event) => click()
         },
         attrs,
         content
     )
+}
 
-export const commandLink = (click: () => void, content: any, attrs?: any) =>    
-    a (
+export function commandLink(click: () => void, content: any, attrs?: any) {
+    return a (
         {
             onclick: (e: Event) => click()
         },
         attrs,
         content
     )
+ }
 
-export const inputer = (propertyAccess: () => any, inputAction: (propertyChange: KeyValue) => any, attrs?: any) =>    
-    input(
+export function inputer(propertyAccess: () => any, inputAction: (propertyChange: KeyValue) => any, attrs?: any)
+{
+    var handler = handlePropertyChange (propertyAccess, inputAction)
+    return input(
         {
             value: Let(propertyAccess(), value =>
                 typeof value === "number" && isNaN (value) ? "" : value
             ),   
-            oninput: (e: Event) => inputAction({
-                key: key(propertyAccess),
-                value: (<HTMLInputElement>e.target).value
-            })
+            oninput: handler,
+            onchange: handler
         },
         attrs
     )
+}
 
-export const slider = (propertyAccess: () => any, min: number, max:number, step:number, slideAction: (propertyChange: KeyValue) => any, attrs?: any) =>
-    input (
+export function handlePropertyChange (propertyAccess: () => any, action: (propertyChange: KeyValue) => void) {
+    return (e: Event) => action({
+        key : key (propertyAccess),
+        value: (<HTMLInputElement|HTMLSelectElement>e.target).value
+    })
+}
+
+export function slider (propertyAccess: () => any, min: number, max: number, step: number, slideAction: (propertyChange: KeyValue) => any, attrs?: any)
+{
+    var handler = handlePropertyChange (propertyAccess, slideAction)
+    return input (
         {
             type: "range",
             min: min,
             max: max,
             value: propertyAccess(),
-            oninput: (e: Event) => slideAction({
-                key: key(propertyAccess),
-                value: (<HTMLInputElement>e.target).value
-            })
+            oninput: handler,
+            onchange: handler
         },
         attrs
     )
+}
 
-export const selector =
+export function selector
 (
     labelNode: string|VNode<any>,
     propertyAccess: () => any,
@@ -57,11 +68,11 @@ export const selector =
     hasEmpty: boolean = false,
     selectAction: (propertyChange: KeyValue) => any,
     attrs?: any
-) =>
+)
 {
-    const value = propertyAccess();
-    const allOptions = ! hasEmpty ? options : [["", ""], ...options];
-    const id = key (propertyAccess);
+    const value = propertyAccess()
+    const allOptions = ! hasEmpty ? options : [["", ""], ...options]
+    const id = key (propertyAccess)
 
     return (
         labeledInput (
@@ -72,10 +83,7 @@ export const selector =
                     type: "select",
                     name : id,
                     id : id,
-                    onchange: (e: Event) => selectAction ({
-                        key: id,
-                        value: (<HTMLSelectElement>e.target).value
-                    })
+                    onchange: handlePropertyChange (propertyAccess, selectAction)
                 },
                 attrs,
                 allOptions.map (pair =>
@@ -88,22 +96,25 @@ export const selector =
                 )
             )
         )
-    );
+    )
 }
 
-export const labeledInput = (inputId: PropertyName, labelNode: any, inputNode: VNode<any>) =>
-    div (
+export function labeledInput(inputId: PropertyName, labelNode: any, inputNode: VNode<any>)
+{
+    return div (
         label ({ for: propertyName (inputId) }, labelNode),
         div (inputNode)
     )
+}
 
-export const radioGroup =
+export function radioGroup 
 (
     propertyAccess: () => any,
     options: string[][] = [],
     checkedAction: (propertyChange: KeyValue) => any
-) =>
-    div (
+)
+{
+    return div (
         options.map (pair =>
             label (
                 input({
@@ -111,10 +122,7 @@ export const radioGroup =
                     name: key (propertyAccess),
                     type: "radio",
                     checked: fuzzyEquals(pair[0], propertyAccess()) ? "checked" : undefined,
-                    onchange: (e: Event) => checkedAction ({
-                        key: key (propertyAccess),
-                        value: (<HTMLInputElement>e.target).value
-                    }),
+                    onchange: handlePropertyChange (propertyAccess, checkedAction),
                     onupdate: (element: HTMLInputElement, props?: VProps) => {
                         element.checked = element.getAttribute ("checked") == "checked"
                     }
@@ -124,3 +132,4 @@ export const radioGroup =
             )
         )
     )
+ }

@@ -6,14 +6,9 @@ import { Exclude, classToPlain } from 'class-transformer'
 
 export abstract class Component
 {
-    @Exclude() app?: () => App
+    @Exclude() app?: App
     @Exclude() parent?: Component    
-    
-    constructor (parent?: Component)
-    {
-        this.parent = parent;
-    }
-
+        
     view(): VNode<any> {
         return div ((<any>this.constructor).name)
     }
@@ -24,8 +19,7 @@ export abstract class Component
 
     update(updater: () => void, payload: any = {})
     {
-        const root = this.root()
-        const app = root.app ? root.app() : undefined
+        const app = this.root().app
         payload.source = this
         
         try {
@@ -74,6 +68,11 @@ export abstract class Component
         )
     }
 
+    setApp (app: App) {
+        this.app = app
+        this.setParent (undefined)
+    }
+
     setParent (parent?: Component) {
         this.parent = parent
         for (var key of Object.keys(this)) {
@@ -81,5 +80,9 @@ export abstract class Component
             if (c != parent && c instanceof Component)
                 c.setParent (this)  
         }
+        if (this.afterAttached)
+            this.afterAttached()
     }
+
+    afterAttached?() : void
 }
