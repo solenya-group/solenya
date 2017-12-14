@@ -76,17 +76,15 @@ Components update their state exclusively via the their `update` method, which w
 
 # State, View and Updates
 
-Pickle has a uni-directional cyclic relationship been state, view, and updates:
+A pickle app outputs a virtual DOM node as a pure function of its state. On each update, the previous root virtual DOM node is compared with the new one, and the actual DOM is efficiently patched with the change. DOM events can trigger updates, which result in a view refresh, forming a cyclic relationship between the state and the view.
 
-* The *view* is a pure function of *state*
-* *state* is altered through *updates*
-* *updates* are triggered by the *view*
+Components help you factor your app into reusable parts, or parts with separate concerns. An app has a reference to your root component.
 
-The `Component` class handles this cyclic relationship. 
+Components are designed to be serializable. By default, your component tree is serialized on each update. This provides a unified approach to time travel debugging, hot module reloading, transactions, and undo/redo. Serialization is covered in more detail in the serialization section.
 
-`Component` also handles component composition.
+![pickle flow diagram](pickle-flow-diagram.png "Pickle Flow Diagram")
 
-Pickle components are designed to be serializable. By default, your component tree is serialized on each update. This provides a unified approach to time travel debugging, hot module reloading, transactions, and undo/redo. Serialization is covered in more detail in the serialization section.
+This flow diagram represents updating a GrandChild2 component.
 
 # Composition
 
@@ -321,7 +319,7 @@ module.hot.accept('../app/samples', () => { location.reload() })
 ```
 # Async
 
-Pickle's update path is synchronous, so you perform aynchronous activites outside of update. Suppose a button invokes your submit event handler that calls a web service. That could be defined as ollows: 
+Pickle's update path is synchronous, so you perform aynchronous activites outside of update. Suppose a button invokes your submit event handler that calls a web service. That could be defined as follows: 
 
 ```typescript
     async submit () {
