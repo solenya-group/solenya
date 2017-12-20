@@ -33,18 +33,15 @@ export class App
     
         this.time = new TimeTravel<any> (state => {
             this.rootComponent = <Component><any> plainToClass(rootComponentConstructor, state, {enableCircularCheck:true}  )
-            this.rootComponent.setApp (this)
             this.refresh()
         })
     
-        this.rootComponent.setApp (this)
-        this.snapshot()
         this.refresh()
     }
 
     snapshot()
     {        
-        if (this.recordOn && this.activeUpdates == 0)
+        if (this.activeUpdates == 0)
         {            
             var json = classToPlain (this.rootComponent)
             this.time.push (json)
@@ -55,6 +52,11 @@ export class App
 
     refresh ()
     {
+        this.rootComponent.app = this
+
+        if (this.recordOn)
+            this.snapshot()
+
         if (this.lock)
             return;
 
@@ -74,7 +76,8 @@ export class App
 
             for (var p of manualDomPatches)
                 p()     
-            }
-        )
+
+            this.rootComponent.afterRefreshRecurse()
+        })
     }
 }

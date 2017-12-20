@@ -15,7 +15,8 @@ export function commandButton(click: () => void, content: any, attrs?: any) {
 export function commandLink(click: () => void, content: any, attrs?: any) {
     return a (
         {
-            onclick: (e: Event) => click()
+            onclick: (e: Event) => click(),
+            href: "javascript:;"
         },
         attrs,
         content

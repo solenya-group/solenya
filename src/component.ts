@@ -6,16 +6,16 @@ import { Exclude, classToPlain } from 'class-transformer'
 
 export abstract class Component
 {
-    @Exclude() app?: App
-    @Exclude() parent?: Component    
+    @Exclude() private _app?: App
+    @Exclude() private _parent?: Component    
         
     view(): VNode<any> {
-        return div ((<any>this.constructor).name)
+        return div ((<any>this.constructor).name)    
     }
 
-    beforeUpdate? (payload?: any) : boolean
+    beforeUpdate (payload?: any) { return true }
 
-    afterUpdate? (payload?: any) : void
+    afterUpdate (payload?: any) { }
 
     update(updater: () => void, payload: any = {})
     {
@@ -27,24 +27,21 @@ export abstract class Component
                 app.activeUpdates++
 
             for (var c of this.branch())
-                if (c.beforeUpdate && c.beforeUpdate (payload) === false)
+                if (c.beforeUpdate (payload) === false)
                     return
 
             updater()
 
             for (var c of this.branch())
-                if (c.afterUpdate)
-                    c.afterUpdate (payload)
+                c.afterUpdate (payload)
         }
         finally {
             if (app)
                 app.activeUpdates--
         }
 
-        if (app) {  
-           app.snapshot()
+        if (app) 
            app.refresh()
-        }
     }
 
     root() : Component {
@@ -68,21 +65,43 @@ export abstract class Component
         )
     }
 
-    setApp (app: App) {
-        this.app = app
-        this.setParent (undefined)
-    }
-
-    setParent (parent?: Component) {
-        this.parent = parent
+    children() {
+        const children: Component[] = []
         for (var key of Object.keys(this)) {
-            var c = this[key]
-            if (c != parent && c instanceof Component)
-                c.setParent (this)  
+            var child = this[key]
+            if (child != this.parent && child instanceof Component)
+                children.push (child)
+            else if (child instanceof Array)
+                for (var aChild of child)
+                    if (aChild != this.parent && aChild instanceof Component)
+                        children.push (aChild)                                                
         }
-        if (this.afterAttached)
-            this.afterAttached()
+        return children
     }
 
-    afterAttached?() : void
+    get app() : App | undefined { return this._app }
+
+    set app (app: App | undefined) {
+        this._app = app
+        this.parent = undefined      
+    }
+
+    get parent(): Component | undefined { return this._parent }
+
+    set parent (parent: Component | undefined) {
+        this._parent = parent
+        for (var child of this.children())
+            child.parent = this
+        this.beforeRefresh()
+    }
+
+    afterRefreshRecurse() {
+        for (var child of this.children())
+            child.afterRefreshRecurse()
+        this.afterRefresh()
+    }
+
+    beforeRefresh() { }
+
+    afterRefresh() { }
 }

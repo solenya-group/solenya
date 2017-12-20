@@ -33,6 +33,7 @@ https://github.com/pickle-ts/pickle-samples
 - [TSX](#tsx)
 - [Components or Functions?](#components-or-functions-)
 - [Task List App](#task-list-app)
+- [Beyond Immutability](#beyond-immutability)
 - [Use With...](#use-with)
   * [HTML History](#html-history)
   * [Validation](#validation)
@@ -53,7 +54,7 @@ Let's start with a counter component:
 ```typescript
 export class Counter extends Component
 {
-    count: number = 0
+    count = 0
 
     view () {
         return div (
@@ -108,9 +109,19 @@ Components must have parameterless constructors, though they may include *option
 
 Child components should be created in the constructors, field initialisers, and updates of their parents.
 
+You can specific arrays of components, recursive components, or even arrays of recursive components. Here's from one of the samples:
+
+```typescript
+export class Tree extends Component
+{    
+    @Type (() => Tree) trees: Tree[] = []
+    ...
+}
+```
+
 ## How it Works
 
-After the root component is created, it's attached to the `App` object. Attaching the root will traverse the component hierarchy so that each child has its `parent` property set. This enables updates to a child to bubble up to the root component, which triggers the `App` to refresh, which will then call the root component's `view` method.
+After the root component is created, it's attached to the `App` object. Once attached, each update traverses the component hierarchy ensuring each child has its `parent` property set. This enables updates to a child to bubble up to the root component, which triggers the `App` to refresh, which will then call the root component's `view` method.
 
 ## The @Type Decorator
 
@@ -302,7 +313,7 @@ There's a couple of points to be aware of:
 
 Avoid circular references unless you absolutely need them. Firstly, the serializer doesn't handle them, and secondly, it increases your cyclomatic complexity which is why some languages like F# deliberately force you to minimize them. However, occassionaly you'll need them. To do so:
 
-* override component's `afterAttached` method, which is called immediately after construction & deserialization, and set the circular references there
+* override component's `beforeRefresh` method and set the circular references there
 * exclude the circular references from being serialized with the `@Exclude()` decorator
 
 ## Keep your component state small
@@ -501,11 +512,41 @@ Notes:
 * In a real application, we'd probably have a unique key associated with each todo item, rather than identifying the todo item by name.
 * Try customizing the css. Import the `css` function from pickle, and pass in your css class names. Then pass that css object as an additional argument to `commandButton`.
 
+# Beyond Immutability
+
+Pickle's update model is inspired by transactional memory. The idea is we optimistically mutate the current state, but when we want to, we can time travel back to an old state. This gives us the core benefits of immutability, but with a natural programming model. So an ordinary property update is simply:
+
+```typescript
+state.prop++
+```
+rather than with the immutable pattern:
+
+```typescript
+var newState = { ...state, prop: state.prop + 1 }
+```
+and for nested updates:
+
+```typescript
+root.child1.child2.prop++
+```
+Which with immutability, requires tactics such as functional lensing, otherwise you'd have to go:
+
+```typescript
+var newRoot =
+    { ...root, child1:
+        { ...root.child1, child2:
+            { ...root.child1.child2, prop: root.child1.child2.prop + 1 }
+        } 
+    }
+``` 
+
+The other benefit of the transactional memory approach, is we can also have asynchronous methods that optimistically update `this` when continuing. Note that when we time travel, our `this` in that scenario is of course lost.
+
 # Use With...
 ## HTML History
 https://github.com/ReactTraining/history
 
-You'll want to keep your component's state in sync with the history.
+You'll want to keep your component's state in sync with the history. The sample app demonstrates integrating history to provide basic routing.
 
 ## Validation
 https://github.com/typestack/class-validator
