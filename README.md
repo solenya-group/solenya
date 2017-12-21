@@ -31,7 +31,7 @@ https://github.com/pickle-ts/pickle-samples
 - ['this' Rules](#-this--rules)
 - [HTML Helpers](#html-helpers)
 - [TSX](#tsx)
-- [Components or Functions?](#components-or-functions-)
+- [Components or Functions?](#components-or-functions)
 - [Task List App](#task-list-app)
 - [Beyond Immutability](#beyond-immutability)
 - [Use With...](#use-with)
@@ -253,7 +253,7 @@ Maintaining state history is useful when you want transactions, undo/redo, and t
 You can turn time travel on and off through the time object on App:
 
 ```typescript
-time.recordOn = true
+app.timeTravelOn = true|false
 ```
 Now all updates will be recorded.
 
@@ -277,21 +277,17 @@ When time travel is on, pickle serializes the component tree on each update. It'
 
 It's useful to be able to serialize your application to local storage. This means users can refresh without losing their data, which is also great during development.
 
-Indicate whether you want to save to local storage as we update, by passing a boolean value to the `App` constructor:
+To save our application with each update, we set the app `autosave` property on the app's `storage` object to `true`:
 
 ```typescript
-var app = new App (Counter, "app", true)
+app.storage.autosave = true
 ```
-Our application is now persisted on each update. We can turn that on and off as follows:
+This will save your serialized component tree in local storage with the container id you specified (e.g `"app"`).
 
+To turn `autosave` off and clear your application state from local storage:
 ```typescript
-app.saveOn = true|false
-```
-This will save your serialied component tree in local storage with the container id you specified (e.g `"app"`).
-
-To clear your application state:
-```typescript
-localStorage.removeItem ("app")
+app.storage.autosave = false
+app.storage.clear()
 ```
 
 Pickle uses the `class-transformer` npm package to serialize and deserialize your component classes. Nested components need to be decorated as follows to deserialize correctly:

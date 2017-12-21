@@ -1,41 +1,48 @@
 ﻿import { TimeTravel } from './timeTravel'
+import { Storage } from './storage'
 import { Component } from './component'
 import { vnode, patch, VNode } from './dom'
 import { serialize, deserialize, plainToClass, classToPlain} from 'class-transformer'
 
 export class App 
 {
+    private _rootComponent: Component
     private container: Element
-    private lock: boolean
-    private rootComponent: Component
+    private lock: boolean    
     private rootElement: Element
     private rootVNode: VNode<any>
 
-    saveOn: boolean
-    recordOn = true
-    time: TimeTravel<any>    
-    activeUpdates = 0    
+    storage: Storage
+    timeTravelOn = true
+    time: TimeTravel<any>        
+    activeUpdates = 0
 
-    constructor (rootComponentConstructor : new() => Component, containerId: string, saveOn: boolean = false)
+    constructor (rootComponentConstructor : new() => Component, containerId: string)
     {
-        this.saveOn = saveOn
-
-        if (! saveOn)
-            window.localStorage.removeItem(containerId)
-        
-        var persisted = window.localStorage.getItem(containerId)
-        if (persisted != null)
-            this.rootComponent = <Component>deserialize (rootComponentConstructor, persisted)        
-        else 
-            this.rootComponent = new rootComponentConstructor()           
-
         this.container = document.getElementById (containerId)!        
-    
-        this.time = new TimeTravel<any> (state => {
-            this.rootComponent = <Component><any> plainToClass(rootComponentConstructor, state, {enableCircularCheck:true}  )
-            this.refresh()
-        })
-    
+
+        this.time = new TimeTravel<any> (state =>
+            this.rootComponent = <Component><any> plainToClass(rootComponentConstructor, state, {enableCircularCheck:true}))
+
+        this.storage = new Storage
+        (
+            containerId,
+            () => serialize (this.rootComponent),
+            serialized => this.rootComponent = <Component> deserialize (rootComponentConstructor, serialized)
+        )
+
+        var saved = this.storage.load (false)
+
+        if (! this.rootComponent)
+            this.rootComponent = new rootComponentConstructor()
+    }
+
+    get rootComponent() {
+        return this._rootComponent
+    }
+
+    set rootComponent (rootComponent: Component) {
+        this._rootComponent = rootComponent
         this.refresh()
     }
 
@@ -45,8 +52,7 @@ export class App
         {            
             var json = classToPlain (this.rootComponent)
             this.time.push (json)
-            if (this.saveOn)
-                window.localStorage.setItem (this.container.id, serialize (json))
+            this.storage.save (false, () => serialize (json))
         }        
     }
 
@@ -54,7 +60,7 @@ export class App
     {
         this.rootComponent.app = this
 
-        if (this.recordOn)
+        if (this.timeTravelOn)
             this.snapshot()
 
         if (this.lock)

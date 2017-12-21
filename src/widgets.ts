@@ -2,28 +2,26 @@ import { VNode, VProps } from './dom'
 import { button, input, select, option, div, label, span, br, a } from './html'
 import { KeyValue, key, PropertyName, propertyName, Let, fuzzyEquals } from './util'
 
-export function commandButton(click: () => void, content: any, attrs?: any) { 
+export function commandButton(click: () => void, ...values: any[]) { 
     return button (
         {
             onclick: (e: Event) => click()
         },
-        attrs,
-        content
+        ...values
     )
 }
 
-export function commandLink(click: () => void, content: any, attrs?: any) {
+export function commandLink(click: () => void, ...values: any[]) {
     return a (
         {
             onclick: (e: Event) => click(),
             href: "javascript:;"
         },
-        attrs,
-        content
+        ...values
     )
  }
 
-export function inputer(propertyAccess: () => any, inputAction: (propertyChange: KeyValue) => any, attrs?: any)
+export function inputer(propertyAccess: () => any, inputAction: (propertyChange: KeyValue) => any, ...values: any[])
 {
     var handler = handlePropertyChange (propertyAccess, inputAction)
     return input(
@@ -34,7 +32,7 @@ export function inputer(propertyAccess: () => any, inputAction: (propertyChange:
             oninput: handler,
             onchange: handler
         },
-        attrs
+        ...values
     )
 }
 
@@ -45,7 +43,7 @@ export function handlePropertyChange (propertyAccess: () => any, action: (proper
     })
 }
 
-export function slider (propertyAccess: () => any, min: number, max: number, step: number, slideAction: (propertyChange: KeyValue) => any, attrs?: any)
+export function slider (propertyAccess: () => any, min: number, max: number, step: number, slideAction: (propertyChange: KeyValue) => any, ...values: any[])
 {
     var handler = handlePropertyChange (propertyAccess, slideAction)
     return input (
@@ -57,7 +55,7 @@ export function slider (propertyAccess: () => any, min: number, max: number, ste
             oninput: handler,
             onchange: handler
         },
-        attrs
+        ...values
     )
 }
 
@@ -68,7 +66,7 @@ export function selector
     options: string[][] = [],
     hasEmpty: boolean = false,
     selectAction: (propertyChange: KeyValue) => any,
-    attrs?: any
+    ...values: any[]
 )
 {
     const value = propertyAccess()
@@ -86,8 +84,8 @@ export function selector
                     id : id,
                     onchange: handlePropertyChange (propertyAccess, selectAction)
                 },
-                attrs,
-                allOptions.map (pair =>
+                ...values,
+                ...allOptions.map (pair =>
                     option ({
                         value: pair[0],
                         selected: fuzzyEquals (pair[0], value) ? "selected" : undefined
