@@ -458,12 +458,27 @@ You can write reusable UI code simply writing functions that return virtual DOM 
 
 Generally, you want to use functions rather than classes when the state is non-existent or trivial for users of that function to manage. As the state logic becomes more complex, so will the the code that responds to callbacks sent to those view functions. You'll then want to derive from `Component` to encapsulate managing that state.
 
-To give an example, a slider has a state, but its suffice to have a `slider` function with a callback, that can be used to set state elsewhere. Here was our previous example of using the `slider` function:
+Here's the `commandButton` function, that shortens the very common case of returning a button that handles a click event:
 
 ```typescript
-slider (() => this.height, 100, 250, 1, e => this.updateProperty (e))
+export function commandButton(click: () => void, ...values: any[]) { 
+    return button (
+        {
+            onclick: (e: Event) => click()
+        },
+        ...values
+    )
+}
 ```
-On the other hand, a modal dialog, while also having little state (just a single boolean flag whether its open or not), actually has non-trivial logic around that state. By implementing the modal as a component, every component that uses the modal can get the state logic for free.
+With this pattern, always provide a `...values: any[]` as the last argument. This allows callers to add their own elements and attributes, and is nicely extensible. Here's `myButton` from the sample, that makes `commandButton` specific to a particular bootstrap style:
+
+```typescript
+export function myButton (onclick: () => void, ...values: any[]) {
+    return commandButton (onclick, css("m-2", "btn", "btn-outline-primary"), ...values)
+}
+```
+
+On the other hand, a modal dialog, while also having little state (just a single boolean flag whether its open or not), actually has non-trivial logic around that state. By implementing the modal as a component, every component that uses the modal can get the state logic for free. The samples contain an example of a modal component.
 
 # Task List App
 It's common for client-side web frameworks to demonstrate how they'd write a task app. Here's how you write one in pickle:
@@ -542,7 +557,7 @@ The other benefit of the transactional memory approach, is we can also have asyn
 ## HTML History
 https://github.com/ReactTraining/history
 
-You'll want to keep your component's state in sync with the history. The sample app demonstrates integrating history to provide basic routing.
+The sample app demonstrates integrating history to provide routing. At its heart, routing is about mapping the path of a url to component state. By responding to history changes, you can set the state which will in turn render the correct view. Often the state in these cases is the name of the component or sub-component that should be rendered at the exclusion of its sibling components.
 
 ## Validation
 https://github.com/typestack/class-validator
