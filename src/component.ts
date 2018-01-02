@@ -6,8 +6,8 @@ import { Exclude, classToPlain } from 'class-transformer'
 
 export abstract class Component
 {
-    @Exclude() _app?: App
-    @Exclude() _parent?: Component    
+    @Exclude() private _app?: App
+    @Exclude() private _parent?: Component    
         
     view(): VNode<any> {
         return div ((<any>this.constructor).name)

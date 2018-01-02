@@ -25,18 +25,18 @@
     }
 
     next() {
-        if (this.cursor < this.states.length - 1)
-            this.goto (this.cursor + 1)
+        this.goto (this.cursor + 1)
     }
 
     prev() {
-        if (this.cursor > 0)
-            this.goto (this.cursor - 1)
+        this.goto (this.cursor - 1)
     }
 
     goto (cursor: number) {
-        this.cursor = cursor
-        this.setState (this.states [cursor])
+        if (cursor >= 0 && cursor < this.states.length) {
+            this.cursor = cursor
+            this.setState (this.states [cursor])
+        }
     }
 
     seek (predicate: (state: T) => boolean) {
