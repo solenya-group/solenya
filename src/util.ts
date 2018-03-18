@@ -43,11 +43,3 @@ export function Let<T, U>(obj: T, op: (x: T) => U) {
 export function isNullOrEmpty (s?: string | null) {
     return s == null || s === ''
 }
-
-export type CssType = string|null|undefined
-
-export function css(...classes: CssType[]) {
-    return ({
-        class : classes.filter (c => ! isNullOrEmpty (c)).join(" ")
-    })
-}

@@ -1,291 +1,346 @@
-﻿// based on https://github.com/picodom/picodom/
+﻿// based on https://github.com/jorgebucaran/ultradom
 
-export function vnode(element: Element, map: any) : VNode<VProps> {
-    return (
-        element &&
-        hImp( // h
-            element.tagName.toLowerCase(),
-            {},
-            map.call(element.childNodes, (element: HTMLElement) =>
-                element.nodeType === 3
-                    ? element.nodeValue
-                    : vnode(element, map)
-            )
-        )
+export interface VElement {
+    nodeName: string
+    attributes: VAttributes
+    children: VNode[]
+    key?: string | number
+}
+
+export type VNode = VElement | string | number
+
+export interface VAttributes extends VLifecycle {
+    key?: string | number
+}
+
+export interface VLifecycle {
+    oncreate? (element: Element, attributes?: VAttributes) : void
+    onupdate? (element: Element, attributes?: VAttributes) : void
+    onremove? (element: Element, remove: () => void) : void
+    ondestroy? (element: Element) : void
+}
+
+export function isVElement(vnode?: VNode): vnode is VElement {
+    return vnode && vnode["attributes"]
+}
+
+function squash (children:any[]) {
+    var squashed: any[] = []
+    for (var x of children)
+        if (!Array.isArray(x)) {
+            if (x !== null && x !== undefined)
+                squashed.push (x)
+        }
+        else
+            for (var y of squash (x)) // pickle mod: overly recursive?
+                squashed.push (y)
+    return squashed
+}
+
+export function createVElement(name: string | Function, attributes: VAttributes, ...children: any[]): VElement
+{ 
+    children = squash (children)
+
+    return typeof name === "function"
+        ? name(attributes || {}, children) 
+        : {
+            nodeName: name,
+            attributes: attributes || {},
+            children: children,
+
+            key: attributes && attributes.key
+        }
+}
+
+export function patch (velement: VElement, element?: Element) {
+    var lifecycleCallbacks: (() => void)[] = []
+
+    element = <Element> patchElement(
+        element && (<any>element).parentNode,
+        element,
+        element && (<any>element).node == null
+            ? recycleVElement(element, [].map)
+            : element && (<any>element).node,
+        velement,
+        lifecycleCallbacks,
+        element != null && (<any>element).node == null // isRecycling
     )
+
+    element["node"] = velement // pickle mod
+
+    while (lifecycleCallbacks.length)
+        lifecycleCallbacks.pop()!() // pickle mod
+
+    return element
 }
 
-export function get<T>(path: string[], from: T) {
-    for (var i = 0; i < path.length; i++) {
-        from = from[path[i]]
+function recycleVElement(element: Element, map: Function) {
+    return {
+        nodeName: element.nodeName.toLowerCase(),
+        attributes: {},
+        children: map.call(element.childNodes, function (element: Element) {
+            return element.nodeType === 3 // Node.TEXT_NODE
+                ? element.nodeValue
+                : recycleVElement(element, map)
+        })
     }
-    return from
 }
 
-export function set<T>(to: T, from: T) {
-    for (var i in from) {
-        to[i] = from[i]
-    }
-    return to
+export function merge(target: any, source: any) { // pickle mod
+    var obj = {}
+
+    for (var i in target) obj[i] = target[i]
+    for (var i in source) obj[i] = source[i]
+
+    return obj
 }
 
-function getKey(node?: VNode<VProps>) {
-    if (node && node.props) {
-        return node.props.key
-    }
+function getKey(node: VNode) {
+    return isVElement(node) ? node.key : null
 }
 
-export function isFunction(any: any) {
-    return "function" === typeof any
-}
-
-export function merge(to: any, from: any): any {
-    return set(set({}, to), from)
-}
-
-function setElementProp(element: Node, name: string, value: any, oldValue?: any) {
+function updateAttribute(element: Element, name: string, value: any, oldValue: any, isSVG: boolean) {
     if (name === "key") {
-    }
-    //else if (name === "style") {
-    //    for (var i in merge(oldValue, (value = value || {}))) {
-    //        (<HTMLElement>element).style[i] = null == value[i] ? "" : value[i]
+    // pickle mod - use style strings rather than objects; works better with workflow of transitioning styles from ts to css
+    //} else if (name === "style") {
+    //    for (var i in merge(oldValue, value)) {
+    //        element[name][i] = value == null || value[i] == null ? "" : value[i]
     //    }
-    //}
-        else {
-        try {
-            element[name] = null == value ? "" : value
-        } catch (_) { }
+    } else {
+        if (
+            typeof value === "function"// ||
+            //(name in element && name !== "list" && !isSVG) // with this condition, below element indexer set silently fails on qt browser
+        ) {
+            
+                element[name] = value // == null ? "" : value
+        } else if (value != null && value !== false) {
+            element.setAttribute(name, value)
+        }
 
-        if (!isFunction(value)) {
-            if (null == value || false === value) {
-                (<HTMLElement>element).removeAttribute(name)
-            } else {
-                (<HTMLElement>element).setAttribute(name, value)
+        if (value == null || value === false) {
+            element.removeAttribute(name)
+        }
+    }
+}
+
+function createNode(vnode: VNode, callbacks: any[], isSVG: boolean) {
+    var node =
+        typeof vnode === "string" || typeof vnode === "number"
+            ? document.createTextNode("" + vnode) // pickle mod
+            : (isSVG = (isSVG || vnode.nodeName === "svg"))
+                ? document.createElementNS("http://www.w3.org/2000/svg", vnode.nodeName)
+                : document.createElement(vnode.nodeName)
+
+    if (isVElement(vnode)) { // pickle mod        
+        var attributes = vnode.attributes 
+        if (attributes) {
+
+            if (attributes.oncreate) {
+                callbacks.push(function () {
+                    attributes.oncreate!(<Element>node, attributes) // pickle mod
+                })
+            }
+
+            for (var i = 0; i < vnode.children.length; i++) {
+                node.appendChild(createNode(vnode.children[i], callbacks, isSVG))
+            }
+
+            for (var name in attributes) {
+                updateAttribute(<Element>node, name, attributes[name], null, isSVG)
             }
         }
     }
+
+    return node
 }
 
-function createElement<Props extends VProps>(callbacks: any[], node: VNodeChild<Props>, isSVG?: boolean): Node {
-    if (typeof node === "string") {
-        return document.createTextNode(node)
-    } else {
-        const element = (isSVG = isSVG || node.type === "svg")
-            ? document.createElementNS("http://www.w3.org/2000/svg", node.type)
-            : document.createElement(node.type)
-
-        if (node.props.oncreate) {
-            callbacks.push(() =>
-                node.props.oncreate!(element)
+function updateElement(
+    element: Element,
+    oldAttributes: VAttributes,
+    attributes: VAttributes,
+    callbacks: any[],
+    isRecycling: boolean,
+    isSVG: boolean
+) {   
+    for (var name in merge(oldAttributes, attributes)) {
+        if (
+            attributes[name] !==
+            (name === "value" || name === "checked"
+                ? element[name]
+                : oldAttributes[name])
+        ) {
+            updateAttribute(
+                element,
+                name,
+                attributes[name],
+                oldAttributes[name],
+                isSVG
             )
         }
-
-        for (var i = 0; i < node.children.length; i++) {
-            element.appendChild(createElement(callbacks, <VNode<Props>>node.children[i], isSVG))
-        }
-
-        for (var j in node.props) {
-            setElementProp(element, j, node.props[j])
-        }
-        return element
+    }
+    
+    var cb = isRecycling ? attributes.oncreate : attributes.onupdate
+    if (cb) {
+        callbacks.push(function () {
+            cb!(element, oldAttributes)
+        })
     }
 }
 
-function updateElement<Props extends VProps>(callbacks: any[], element: Node, oldProps: Props, props: Props) {
-    for (var i in merge(oldProps, props)) {
-        var value = props[i]
-        var oldValue = i === "value" || i === "checked" ? (<any>element)[i] : oldProps[i]
+function removeChildren(element: Element, node: VNode) {
+    if (isVElement(node)) { // pickle mod
+        var attributes = node.attributes
+        if (attributes) {
+            for (var i = 0; i < node.children.length; i++) {
+                removeChildren(<Element>element.childNodes[i], node.children[i])
+            }
 
-        if (value !== oldValue) {
-            setElementProp(element, i, value, oldValue)
+            if (attributes.ondestroy) {
+                attributes.ondestroy(element)
+            }
         }
     }
-
-    if (props.onupdate) {
-        callbacks.push(() =>
-            props.onupdate!(element, oldProps)
-        )
-    }
+    return element
 }
 
-function removeElement<Props extends VProps>(parent: Node, element: Node, props: Props) {
+function removeElement(parent: Element, element: Element, velement: VElement) {
     function done() {
-        parent.removeChild(element)
+        parent.removeChild(removeChildren(element, velement))
     }
 
-    if (props && props.onremove) {
-        props.onremove(element, done)
+    var cb = velement.attributes && velement.attributes.onremove
+    if (cb) {
+        cb(element, done)
     } else {
         done()
     }
 }
 
-export function isVNode (vnode: VNodeChild<VProps>) : vnode is VNode<VProps> {
-    return (<VNode<VProps>>vnode).type != null;
-}
+function patchElement(
+    parent: Element,
+    node: Node | undefined,
+    oldVNode: VNode | undefined,
+    vnode: VNode,
+    lifecycleCallbacks: Function[],
+    isRecycling: boolean,
+    isSVG = false
+) {    
+    if (vnode === oldVNode) {
+    } else if (oldVNode == null || oldVNode["nodeName"] !== vnode["nodeName"]) { // pickle mod
+        var newElement = createNode(vnode!, lifecycleCallbacks, isSVG)
+        if (parent) {
+            parent.insertBefore(newElement, node || null) // pickle mod
+            if (oldVNode != null) {
+                removeElement(parent, <Element>node, <VElement> oldVNode) // pickle mod
+            }
+        }
+        node = newElement
+    } else if (oldVNode["nodeName"] == null) { // pickle mod
+        node!.nodeValue = "" + vnode // pickle mod
+    } else {
+        updateElement(
+            <Element>node,
+            (<VElement>oldVNode).attributes,
+            (<VElement>vnode).attributes,
+            lifecycleCallbacks,
+            isRecycling,
+            (isSVG = (isSVG || (<VElement>vnode).nodeName === "svg"))
+        )
 
-export function patch<Props extends VProps> (
-    callbacks: any[],
-    parent: Node,
-    element: Node,
-    oldNode: VNodeChild<Props> | null,
-    node: VNodeChild<Props>,
-    isSVG?: boolean,
-    nextSibling?: Node
-)
-    : Node
-{
-    if (oldNode === node) {
-    } else if (null == oldNode) {
-        element = parent.insertBefore(createElement(callbacks, node, isSVG), element)
-    } else if (isVNode (node) && isVNode (oldNode) && node.type === oldNode.type) {
-        updateElement(callbacks, element, oldNode.props, node.props)
-
-        isSVG = isSVG || node.type === "svg"
-
-        var len = node.children.length
-        var oldLen = oldNode.children.length
         var oldKeyed = {}
-        var oldElements = []
-        var keyed = {}
+        var newKeyed = {}
+        var oldElements: Node[] = []
+        var oldChildren = (<VElement>oldVNode).children
+        var children = (<VElement>vnode).children
 
-        for (var i = 0; i < oldLen; i++) {
-            var oldElement = (oldElements[i] = element.childNodes[i])
-            var oldChild = <VNode<VProps>>oldNode.children[i]
-            var oldKey = getKey(oldChild)
+        for (var i = 0; i < oldChildren.length; i++) {
+            oldElements[i] = node!.childNodes[i]
 
-            if (null != oldKey) {
-                oldKeyed[oldKey] = [oldElement, oldChild]
+            var oldKey = getKey(oldChildren[i])
+            if (oldKey != null) {
+                oldKeyed[oldKey] = [oldElements[i], oldChildren[i]]
             }
         }
 
         var i = 0
-        var j = 0
+        var k = 0
 
-        while (j < len) {
-            var oldElement = oldElements[i]
-            var oldChild = <VNode<VProps>>oldNode.children[i]
-            var newChild = <VNode<VProps>>node.children[j]
+        while (k < children.length) {
+            var oldKey = getKey(oldChildren[i])
+            var newKey = getKey((children[k] = children[k]))
 
-            var oldKey = getKey(oldChild)
-            if ((<any>keyed)[oldKey!]) {
+            if (oldKey && newKeyed[oldKey]) { // pickle mod
                 i++
                 continue
             }
 
-            var newKey = getKey(newChild)
-            var keyedNode = oldKeyed[newKey!] || []
-
-            if (null == newKey) {
-                if (null == oldKey) {
-                    patch(callbacks, element, oldElement, oldChild, newChild, isSVG)
-                    j++
+            if (newKey == null || isRecycling) {
+                if (oldKey == null) {
+                    patchElement(
+                        <Element>node,
+                        oldElements[i],
+                        <VElement>oldChildren[i],
+                        <VElement>children[k],
+                        lifecycleCallbacks,
+                        isRecycling,
+                        isSVG
+                    )
+                    k++
                 }
                 i++
             } else {
+                var keyedNode = oldKeyed[newKey] || []
+
                 if (oldKey === newKey) {
-                    patch(callbacks, element, keyedNode[0], keyedNode[1], newChild, isSVG)
+                    patchElement(
+                        <Element>node,
+                        keyedNode[0],
+                        keyedNode[1],
+                        <VElement>children[k],
+                        lifecycleCallbacks,
+                        isRecycling,
+                        isSVG
+                    )
                     i++
                 } else if (keyedNode[0]) {
-                    element.insertBefore(keyedNode[0], oldElement)
-                    patch(callbacks, element, keyedNode[0], keyedNode[1], newChild, isSVG)
+                    patchElement(
+                        <Element>node,
+                        node!.insertBefore(keyedNode[0], oldElements[i]),
+                        keyedNode[1],
+                        <VElement>children[k],
+                        lifecycleCallbacks,
+                        isRecycling,
+                        isSVG
+                    )
                 } else {
-                    patch(callbacks, element, oldElement, null, newChild, isSVG)
+                    patchElement(
+                        <Element>node,
+                        oldElements[i],
+                        undefined, // pickle mod
+                        <VElement>children[k],
+                        lifecycleCallbacks,
+                        isRecycling,
+                        isSVG
+                    )
                 }
 
-                j++
-                keyed[newKey] = newChild
+                newKeyed[newKey] = children[k]
+                k++
             }
         }
 
-        while (i < oldLen) {
-            var oldChild = <VNode<VProps>>oldNode.children[i]
-            var oldKey = getKey(oldChild)
-            if (null == oldKey) {
-                removeElement(element, oldElements[i], oldChild.props)
+        while (i < oldChildren.length) {
+            if (getKey(oldChildren[i]) == null) {
+                removeElement(<Element>node, <Element>oldElements[i], <VElement>oldChildren[i])
             }
             i++
         }
 
-        for (var k in oldKeyed) {
-            var keyedNode = oldKeyed[k]
-            var reusableNode = keyedNode[1]
-            if (!keyed[reusableNode.props.key]) {
-                removeElement(element, keyedNode[0], reusableNode.props)
+        for (var j in oldKeyed) {
+            if (!newKeyed[j]) {
+                removeElement(<Element>node, oldKeyed[j][0], oldKeyed[j][1])
             }
         }
-    } else if (element && node !== element.nodeValue) {
-        if (typeof node === "string" && typeof oldNode === "string") {
-            element.nodeValue = node
-        } else {
-            element = parent.insertBefore(
-                createElement(callbacks, node, isSVG),
-                (nextSibling = element)
-            )
-            removeElement(parent, nextSibling, (<VNode<Props>>oldNode).props)
-        }
     }
-
-    return element
+    return node
 }
-
-//export function h<Props extends VProps>
-export function hImp<Props extends VProps>
-(
-    type: StatelessComponent<Props> | string,
-    props?: Props,
-    children?: VNodeChildren  
-)
-    : VNode<Props>
-{
-    var node
-    var stack = []
-    children = []
-
-    for (var i = arguments.length; i-- > 2;) {
-        stack.push(arguments[i])
-    }
-
-    while (stack.length) {
-        if (Array.isArray((node = stack.pop()))) {
-            for (i = node.length; i--;) {
-                stack.push(node[i])
-            }
-        } else if (null == node || node === true || node === false) {
-        } else {
-            children.push(typeof node === "number" ? (node = node + "") : node)
-        }
-    }
-
-    return typeof type === "string"
-        ? <VNode<Props>>{
-            type: type,
-            props: props || {},
-            children: children
-        }
-        : <VNode<Props>>type(props || <Props>{}, <any>children)
-}
-
-export interface StatelessComponent<Props> {
-    (props: Props, children: VNodeChild<{} | null>[]): VNode<{}>
-}
-
-export interface VProps {
-    key?: string,
-    oncreate?: (element: Node, props?: VProps) => void
-    onupdate?: (element: Node, props?: VProps) => void
-    onremove?: (element: Node, remove: () => void) => void
-}
-
-export interface VNode<Props extends VProps> {
-    type: string
-    props: Props
-    children: VNodeChild<{} | null>[]
-}
-
-export type VNodeChild<Props> = VNode<Props> | string
-
-export type VNodeChildren =
-    | Array<VNodeChild<{} | null> | number | undefined>
-    | VNodeChild<{} | null>
-    | number

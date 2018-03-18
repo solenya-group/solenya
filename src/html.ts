@@ -1,22 +1,19 @@
-﻿import { hImp, merge, VNode } from './dom'
+﻿import { createVElement, VElement, isVElement, merge } from './dom'
 
-function isVNode (v: any) {
-    return v.type && v.props && v.children
-}
-
-export function h (tag: string, ...values: any[]): VNode<{}>
+export function h (tag: string, ...values: any[]): VElement
 {
-    var props = {}
+    var attributes = {}
     while (values.length > 0) {
         var head = values[0]        
-        if (head != null && typeof head == "object" && ! isVNode(head) && ! Array.isArray(head)) {
-            props = merge (props, head)
+        if (head != null && typeof head == "object" && ! isVElement(head) && ! Array.isArray(head)) {
+            attributes = merge (attributes, head)
             values = values.slice(1)
         }
         else
             break
     }
-    return hImp (tag, props, values)        
+
+    return createVElement (tag, attributes, ...values)        
 }
 
 export function a(...values: any[]) {

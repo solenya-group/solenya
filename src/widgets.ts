@@ -1,4 +1,4 @@
-import { VNode, VProps } from './dom'
+import { VElement, VAttributes } from './dom'
 import { button, input, select, option, div, label, span, br, a } from './html'
 import { KeyValue, key, PropertyName, propertyName, Let, fuzzyEquals } from './util'
 
@@ -53,7 +53,8 @@ export function slider (propertyAccess: () => any, min: number, max: number, ste
             max: max,
             value: propertyAccess(),
             oninput: handler,
-            onchange: handler
+            onchange: handler,
+            step: step
         },
         ...values
     )
@@ -61,7 +62,7 @@ export function slider (propertyAccess: () => any, min: number, max: number, ste
 
 export function selector
 (
-    labelNode: string|VNode<any>,
+    labelNode: string|VElement,
     propertyAccess: () => any,
     options: string[][] = [],
     hasEmpty: boolean = false,
@@ -98,7 +99,7 @@ export function selector
     )
 }
 
-export function labeledInput(inputId: PropertyName, labelNode: any, inputNode: VNode<any>)
+export function labeledInput(inputId: PropertyName, labelNode: any, inputNode: VElement)
 {
     return div (
         label ({ for: propertyName (inputId) }, labelNode),
@@ -122,7 +123,7 @@ export function radioGroup
                     type: "radio",
                     checked: fuzzyEquals(pair[0], propertyAccess()) ? "checked" : undefined,
                     onchange: handlePropertyChange (propertyAccess, checkedAction),
-                    onupdate: (element: HTMLInputElement, props?: VProps) => {
+                    onupdate: (element: HTMLInputElement, attributes?: VAttributes) => {
                         element.checked = element.getAttribute ("checked") == "checked"
                     }
                 }),

@@ -1,30 +1,28 @@
 ﻿import { TimeTravel } from './timeTravel'
 import { Storage } from './storage'
 import { Component } from './component'
-import { vnode, patch, VNode } from './dom'
+import { patch, VElement } from './dom'
 import { serialize, deserialize, plainToClass, classToPlain} from 'class-transformer'
 
 export class App 
 {   
     private _rootComponent: Component
-    private container: Element
-    private lock: boolean    
+    private lock = false
     private rootElement: Element
-    private rootVNode: VNode<any>
+    private _timeTravelOn = false
+    private isVdomRendered = false
     
-    storage: Storage
-    timeTravelOn = true
+    storage: Storage    
     time: TimeTravel<any>        
     activeUpdates = 0
 
     constructor (rootComponentConstructor : new() => Component, containerId: string)
     {
-        this.container = document.getElementById (containerId)!        
+        this.rootElement = document.getElementById (containerId)!        
 
         this.time = new TimeTravel<any> (state =>
             this.setRootComponent (
-                <Component><any> plainToClass(rootComponentConstructor, state, {enableCircularCheck:true}),
-                true
+                <Component><any> plainToClass(rootComponentConstructor, state, {enableCircularCheck:true}), false, false 
             )
         )
 
@@ -32,10 +30,10 @@ export class App
         (
             containerId,
             () => serialize (this.rootComponent),
-            serialized => this.setRootComponent (<Component> deserialize (rootComponentConstructor, serialized))
+            serialized => this.setRootComponent (<Component> deserialize (rootComponentConstructor, serialized), false)
         )
 
-        var saved = this.storage.load (false)
+        this.storage.load ()
 
         if (! this.rootComponent)
             this.setRootComponent (new rootComponentConstructor())
@@ -45,28 +43,39 @@ export class App
         return this._rootComponent
     }
 
-    private setRootComponent (rootComponent: Component, isTimeTravel = false) {
+    private setRootComponent (rootComponent: Component, doSave?: boolean, doTimeSnapshot?: boolean) {
         this._rootComponent = rootComponent
-        this.refresh (isTimeTravel)
+        this.snapshot (doSave, doTimeSnapshot)
+        this.refresh ()
     }
 
-    snapshot ()
-    {        
+    get timeTravelOn() {
+        return this._timeTravelOn
+    }
+
+    set timeTravelOn(value: boolean) {
+        this._timeTravelOn = value;
+        if (value) 
+            this.snapshot (false, true)        
+    }
+
+    snapshot (doSave?: boolean, doTimeSnapshot?: boolean)
+    {
         if (this.activeUpdates == 0)
-        {            
-            var json = classToPlain (this.rootComponent)
-            this.time.push (json)
-            this.storage.save (false, () => serialize (json))
-        }        
+        {
+            var json: Object
+            if (doTimeSnapshot || (this.timeTravelOn && doTimeSnapshot !== false)) {
+                json = classToPlain (this.rootComponent)
+                this.time.push (json)
+            }
+            this.storage.save (doSave, () => json != null ? serialize (json) : serialize (this.rootComponent))
+        }
     }
 
-    refresh (isTimeTravel = false)
+    refresh ()
     {
         this.rootComponent.app = this
-
-        if (this.timeTravelOn && ! isTimeTravel)
-            this.snapshot ()
-
+      
         if (this.lock)
             return;
 
@@ -75,17 +84,17 @@ export class App
         {
             this.lock = false;            
 
-            var nextNode = this.rootComponent.view()
+            var rootVNode = this.rootComponent.view()
 
             if (this.lock)
                 return;
 
-            var manualDomPatches : (() => void)[] = []
-            this.rootElement = <Element> patch (manualDomPatches, this.container!, this.rootElement, this.rootVNode, nextNode)
-            this.rootVNode = nextNode;
-
-            for (var p of manualDomPatches)
-                p()     
+            if (this.isVdomRendered)
+                patch (rootVNode, <Element>this.rootElement.lastElementChild)
+            else {
+                this.rootElement.appendChild (patch (rootVNode))
+                this.isVdomRendered = true
+            }               
 
             this.rootComponent.afterRefreshRecurse()
         })

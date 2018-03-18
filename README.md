@@ -21,6 +21,9 @@ https://github.com/pickle-ts/pickle-samples
 - [Updates](#updates)
   * [Advanced Updates](#advanced-updates)
 - [Views](#views)
+  * [Lifecycle Events](#lifecycle-events)
+  * [The Lifecycle Function](#the-lifecycle-function)
+  * [DOM keys](#dom-keys)
 - [App](#app)
 - [Time Travel](#time-travel)
 - [Serialization](#serialization)
@@ -31,7 +34,6 @@ https://github.com/pickle-ts/pickle-samples
 - ['this' Rules](#-this--rules)
 - [HTML Helpers](#html-helpers)
 - [TSX](#tsx)
-- [Components or Functions?](#components-or-functions)
 - [Task List App](#task-list-app)
 - [Beyond Immutability](#beyond-immutability)
 - [Use With...](#use-with)
@@ -42,12 +44,12 @@ https://github.com/pickle-ts/pickle-samples
 
 Pickle is a small library for writing client-side web apps. Core features:
 
-* Serializable, Composable, Inheritable Components
+* *Stateful* components with *stateless* views
+* Serializable, composable, inheritable components
 * Unified approach to time travel debugging, hot module reloading, transactions, undo/redo
-* Pure view functions via a Virtual DOM (Picodom)
+* Virtual DOM (Ultradom)
 * Typescript orientation
 * DRY as possible
-* Supports both code and tsx HTML syntax
 
 Let's start with a counter component:
 
@@ -65,7 +67,7 @@ export class Counter extends Component
     }
 
     add (x: number) {
-        return this.update(() => this.count += x) 
+        this.update(() => this.count += x) 
     }
 }
 ```
@@ -161,7 +163,7 @@ export class BMI extends Component
 
 The `updateProperty` callback takes a `KeyValue` argument, which has a key and value that map to the Component property name and new value. `updateProperty` calls through to the component's `update` for you, which is explained in the next section.
 
-**Always initialise component number fields explicitly, and use NaN rather than undefined**. This is because **Typescript transpiles away property types**, meaning that pickle can't know whether it's dealing with a string or number, and assumes an undefined value is a string by default, in the absence of a runtime value.
+**Always initialise component fields explicitly, and for numbers use NaN rather than undefined**. This is because **Typescript transpiles away property types**, meaning that at runtime pickle can't know whether it's dealing with a string or number, and assumes an undefined value is a string by default, in the absence of a runtime value.
 
 # Updates
 
@@ -169,7 +171,7 @@ All state transitions must occur in a constructor, or via an update:
 
 ```typescript
     add (x: number) {
-        return this.update(() => this.count += x) 
+        this.update(() => this.count += x) 
     }
 ```
 You pass `update` a void function that performs a state transition.
@@ -211,15 +213,21 @@ Override `afterUpdate` to respond to any update, performing any final state modi
 
 Both `beforeUpdate` and `afterUpdate` are called on an update, from child through the root. This allows a parent to control and respond to updates made by its children, without having to handle specific callbacks.
 
-`payload` is an optional argument that describes the change. `payload` is typed `any` for convenience, but has a `source` property of type `Component`, since its occassionally useful to know which component initiated the update.
+Here's the signature of the `update` API:
 
-Where does `payload` come from? Component's `update` method actually takes an optional second argument — `payload` — for describing the update. For example, Component's `updateProperty` method, when calling through to `update`, supplies a payload with a `key` and `value`, which correspond to the component property name and value.
+```typescript
+update(updater: () => void, payload: any = {})
+```
+
+`payload` is an optional argument that describes the update. `payload` is typed `any` for convenience, but `update` will set its `source` property to `this`, since its occassionally useful for `beforeUpdate` and `afterUpdate` to know which component initiated the update.
+
+Component's `updateProperty` method, when calling through to `update`, supplies a payload with a `key` and `value`, which correspond to the component property name and value.
 
 # Views
 
-Views are pure functions of state. Pickle uses a virtual DOM (Picodom) to efficiently update the actual DOM.
+Views are pure functions of state. Pickle uses a virtual DOM (Ultradom) to efficiently update the actual DOM.
 
-You can add as may optional parameters as you want to your child component `View` methods. This makes it easy for parents to customize their children without their children needing state:
+You can add as may optional parameters as you want to your child component `View` methods. This makes it easy for parents to customize their children without their children needing extra state:
 
 ```typescript
     view () {
@@ -229,7 +237,68 @@ You can add as may optional parameters as you want to your child component `View
         )
     }
 ```
-View methods return the type VNode<any> and be written is ordinary code or use tsx. Both these approaches are explained in their own sections later.
+`view` methods return the type `VElement`. However, your component might be faceless, having no view implementation, or might have several methods returning different `VElement` objects. This is because pickle components are state-centric, not view-centric.
+
+To write a reusable view, your first approach should be to merely write a function that returns a `VElement`. However, if your view function ends up requiring callbacks to write state back to a component, then you should probably rewrite that view as a component itself, to better encapsulate that state logic.
+
+## Lifecycle Events
+
+For the most part, views are pure functions of state. However, the DOM can have additional state, such as inputs that have focus and selections. Furthermore, animations, at a low level, need to interact with DOM bypassing the virtual DOM. This is for both performance reasons (as you don't want to invoke the GC), as well as keeping your application state logic separated from your animation state. For example, if you delete an item from a list, it's a simplifying assumption for your application state to consider that item gone, but you'll want that item to live a little longer in the real DOM to gracefully exit.
+
+To interact with the DOM directly, you provide lifecycle callbacks on your virtual DOM elements. The lifecycle callbacks are the same as Ultradom: `oncreate`, `onupdate`, `onremove`, and `ondestroy`. Here's how you might plug in some focusing logic when the real DOM element is created:
+
+```typescript
+ div ({
+     oncreate: (el: Element, attrs: VAttributes) => handleFocus (el...)
+    ...
+```
+When your virtual div element is turned into an actual div element, your `oncreate` callback is passed the actual div element.
+
+## The lifecycle function
+
+You can also use the `lifecycle` function to compose lifecycle events. This is very convenient when handling multiple lifecycle events, for handling transitory state across lifecycle events, and for handling the same lifecycle hooks more than once, by layering the hooks like an onion.
+
+The high level code to animate a div would look like:
+
+```typescript
+someAnimation (
+    div ({ key: "widget1", class: "widget"})
+)
+```
+Where `someAnimation` could be implemented like:
+
+```typescript
+import { VElement, VAttributes, lifecycle } from 'pickle'
+
+export function someAnimation (config: AnimationConfig, el: VElement)
+{
+    var someState: any
+
+    return lifecycle (el, {
+        oncreate (el: Element, attributes: VAttributes) {
+            someState...
+        },
+        onupdate (el: Element, attributes: VAttributes) {
+            someState...
+        },
+        onremove (el: Element, remove: () => void) {
+            someState
+        }
+    })
+}
+```
+`lifecycle` takes and an object with lifecycle hooks, and returns the same element combining hooks if necessary.
+
+By design, these lifecycle events are not present on pickle components. Pickle components manage application state, only affecting DOM state via the virtual DOM. This lets you separate the very different lifecycles of application state and DOM state, making your code easier to maintain.
+
+## DOM Keys
+
+After each update, the virtual DOM is patched. It does this by comparing the current virtual DOM tree to the new previous one, and modifying the real DOM accordingly. However, the patching algorithm can't know your intent, and so occassionally does the wrong thing. It may try to reuse an element that you definitely want to replace, or it may try to replace a list of child elements, when you merely wanted to reorder. To better determine the creation and destruction of DOM nodes, provide *keys* for your virtual DOM nodes. For example:
+
+```typescript
+div ({key: wizardPage})
+```
+If the key changes, the patcher now knows to definitely recreate that DOM element. This means even if your next wizard page happened to have an input that could have been updated, that instead it will be replaced, predictably resetting DOM state like focus and selections, and invoking any animations that should occur on element creation.
 
 # App
 
@@ -314,6 +383,8 @@ Avoid circular references unless you absolutely need them. Firstly, the serializ
 
 ## Keep your component state small
 
+As a general rule, don't gratuitously use component state, and instead try to use pure functions where you can. In particular, avoid storing UI styles in component state - instead pass styles from a parent view down to child views. If you must store a UI style in a component, you'll probably want to decorate it with `@Exclude` to avoid serialization.
+
 Serialization, deserialization, and local storage are surpisingly fast. However, efficiency is still important. Avoid properties with large immutable objects, and instead indirectly reference them with a key. For example, instead of directly storing a localisation table of French data on your component, you'd merely store the string "fr", and return the localisation table based on that key. Minimize the state on your components to that which you need to respond to user actions; keep it as close to a state machine as possible.
 
 # Hot Module Reloading
@@ -374,7 +445,7 @@ The HTML helpers take a spread of attribute objects, elements, and primitive val
 div ()                                  // empty
 div ("hello")                           // primitive value
 div ({id: 1})                           // attribute
-div ({id: 1, foo:2})                    // multiple attributes
+div ({id: 1, class:"foo"})              // multiple attributes
 div ({id: 1}, "hello")                  // attribute followed by element
 div (div ())                            // nested elements
 div ({id: 1}, "hello", div("goodbye"))  // combination
@@ -382,18 +453,8 @@ div ({id: 1}, "hello", div("goodbye"))  // combination
 Multiple attribute objects are merged. Merging attributes is really useful when writing functions allowing the caller to merge their own attributes in with yours. The following are equivalent:
 
 ```typescript
-div ({id: 1,}, {foo:2})
-div ({id: 1, foo:2})   
-```
-
-The `css` helper method lets you express css attributes as a list, rather than a string.
-```typescript
-div (css("foo", "goo"))   
-```
-`css` will automatically strip out null or undefined values. So the following are equivalent:
-```typescript
-div (css("foo", null))
-div ({class : "foo"})
+div ({id: 1}, {class:"foo"})
+div ({id: 1, class:"foo"})  
 ```
 Event handlers are specified as simply a name followed by the handler:
 ```
@@ -401,14 +462,6 @@ button (
     { onclick : () => this.add (1) }, "+"
 )
 ```
-The lifecycle callbacks are the same as picodom: `oncreate`, `onupdate`, and `onremove`. Here's an example:
-
-```typescript
- div ({
-     oncreate: (element: Element) => this.onCreateModal (element...)
-    ...
-```
-When your virtual div element is turned into an actual div element, your `oncreate` callback is passed the actual div element.
 
 # TSX
 
@@ -441,45 +494,17 @@ To use tsx with pickle, you must:
 1) In each .tsx file, include the 'h' function from pickle, as element tags get converted into calls to `h`
 2) In your project, create a file called `jsx.d.ts` with the following:
 ```
-import { VNode } from 'pickle-ts'
+import { VElement } from 'pickle-ts'
 
 declare global {
     namespace JSX {
-        interface Element<Data> extends VNode<Data> { }
+        interface Element<Data> extends VElement { }
         interface IntrinsicElements {
             [elemName: string]: any
         }
     }
 }
 ```
-# Components or Functions?
-
-You can write reusable UI code simply writing functions that return virtual DOM nodes, or by deriving from `Component` class. Which to use?
-
-Generally, you want to use functions rather than classes when the state is non-existent or trivial for users of that function to manage. As the state logic becomes more complex, so will the the code that responds to callbacks sent to those view functions. You'll then want to derive from `Component` to encapsulate managing that state.
-
-Here's the `commandButton` function, that shortens the very common case of returning a button that handles a click event:
-
-```typescript
-export function commandButton(click: () => void, ...values: any[]) { 
-    return button (
-        {
-            onclick: (e: Event) => click()
-        },
-        ...values
-    )
-}
-```
-With this pattern, always provide a `...values: any[]` as the last argument. This allows callers to add their own elements and attributes, and is nicely extensible. Here's `myButton` from the sample, that makes `commandButton` specific to a particular bootstrap style:
-
-```typescript
-export function myButton (onclick: () => void, ...values: any[]) {
-    return commandButton (onclick, css("m-2", "btn", "btn-outline-primary"), ...values)
-}
-```
-
-On the other hand, a modal dialog, while also having little state (just a single boolean flag whether its open or not), actually has non-trivial logic around that state. By implementing the modal as a component, every component that uses the modal can get the state logic for free. The samples contain an example of a modal component.
-
 # Task List App
 It's common for client-side web frameworks to demonstrate how they'd write a task app. Here's how you write one in pickle:
 
@@ -521,7 +546,7 @@ export class Todos extends Component
 Notes:
 * Keep things simple! Only write components if they need to manage their own state. In this case, we didn't need a sub component for an individual task.
 * In a real application, we'd probably have a unique key associated with each todo item, rather than identifying the todo item by name.
-* Try customizing the css. Import the `css` function from pickle, and pass in your css class names. Then pass that css object as an additional argument to `commandButton`.
+* Try passing in `{class: "your-class"}` as an additional argument to `commandButton` to customize the css.
 
 # Beyond Immutability
 

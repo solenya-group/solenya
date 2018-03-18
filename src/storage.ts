@@ -10,32 +10,41 @@
         this.deserialize = deserialize
     }
 
-    load (force: boolean) {
-        if (force || this.autosave) {
+    load (doLoad?: boolean) {
+        if (supported() && (doLoad || (this.autosave && doLoad !== false))) {
             var serialized = window.localStorage.getItem (this.containerId)
             if (serialized)
                 this.deserialize (serialized)
         }
     }
 
-    save (force: boolean, getObj?: () => any) {
-        if (force || this.autosave) {
+    save (doSave?: boolean, getObj?: () => any) {
+        if (supported() && (doSave || (this.autosave && doSave !== false))) {
             var obj = getObj ? getObj() : this.serialize()
             window.localStorage.setItem (this.containerId, obj)
         }
     }
         
     clear() {
-        window.localStorage.removeItem (this.containerId)
+        if (supported())
+            window.localStorage.removeItem (this.containerId)
     }
 
     get autosave () {
+        if (! supported())
+            return false
         return window.localStorage.getItem (this.containerId + "-autosave") == "true"
     }
 
     set autosave (saveOn: boolean) {
+        if (! supported())
+            return
         window.localStorage.setItem (this.containerId + "-autosave", "" + saveOn)
         if (saveOn)
             this.save (false)
     }
+}
+
+function supported() {
+    return window.localStorage != null
 }

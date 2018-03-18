@@ -1,6 +1,6 @@
 ﻿import { App } from './app';
 import { div } from './html'
-import { VNode } from './dom'
+import { VElement } from './dom'
 import { parseTyped, KeyValue } from './util'
 import { Exclude, classToPlain } from 'class-transformer'
 
@@ -9,7 +9,7 @@ export abstract class Component
     @Exclude() private _app?: App
     @Exclude() private _parent?: Component    
         
-    view(): VNode<any> {
+    view(): VElement {
         return div ((<any>this.constructor).name)
     }
 
@@ -40,8 +40,10 @@ export abstract class Component
                 app.activeUpdates--
         }
 
-        if (app) 
-           app.refresh()
+        if (app) {
+           app.snapshot ()
+           app.refresh ()
+        }
     }
 
     root() : Component {
