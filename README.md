@@ -272,17 +272,15 @@ import { VElement, VAttributes, lifecycle } from 'pickle'
 
 export function someAnimation (config: AnimationConfig, el: VElement)
 {
-    var someState: any
-
     return lifecycle (el, {
         oncreate (el: Element, attributes: VAttributes) {
-            someState...
+            // possibly attach some state to el for use across multiple lifecycle invocations
         },
         onupdate (el: Element, attributes: VAttributes) {
-            someState...
+            ...
         },
         onremove (el: Element, remove: () => void) {
-            someState
+            ...
         }
     })
 }
