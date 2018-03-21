@@ -1,33 +1,47 @@
-﻿import { VElement, VLifecycle } from "./dom"
+﻿import { VElement, VAttributes } from './dom'
 
-export function lifecycle (el: VElement, life: VLifecycle) : VElement
+export interface LifecycleListener
 {
-    const attributes = el.attributes
+    update?() : void
+    remove?() : Promise<void>
+    destroy?() : void
+}
 
-    var create = attributes.oncreate
-    var update = attributes.onupdate
-    var remove = attributes.onremove
-    var destroy = attributes.ondestroy
+export function lifecycleListener (velement: VElement, createLifecycleListener: (el: Element) => LifecycleListener)
+{   
+    const attributes = velement.attributes
+    const {oncreate, onupdate, onremove, ondestroy} = velement.attributes
 
-    attributes.oncreate = (el, attrs) => {                   
-        life.oncreate && life.oncreate (el, attrs)
-        create && create(el, attrs)
+    velement.lifecycleListenerCount = (velement.lifecycleListenerCount || 0) + 1
+    const lid = "lifecycleListener" + velement.lifecycleListenerCount
+
+    attributes.oncreate = (el, attrs) => {  
+        const life = el[lid] = createLifecycleListener(el)
+        oncreate && oncreate(el, attrs)    
     }
 
     attributes.onupdate = (el, attrs) => {                   
-        life.onupdate && life.onupdate (el, attrs)
-        update && update(el, attrs)
+        const life = el[lid] as LifecycleListener
+        life.update && life.update()
+        onupdate && onupdate(el, attrs)
     }
 
-    attributes.onremove = (el, rem ) => {        
-        life.onremove && life.onremove (el, rem)
-        remove && remove ( el, () => {})
-    }
+    attributes.onremove = async (el, rem) => {  
+        const life = el[lid] as LifecycleListener        
+        if (life.remove)
+            await life.remove ()
+
+        if (onremove)
+            onremove(el, rem)
+        else
+            rem()     
+    }     
 
     attributes.ondestroy = el => {        
-        life.ondestroy && life.ondestroy (el) 
-        destroy && destroy(el)
-    }
+        const life = el[lid] as LifecycleListener
+        life.destroy && life.destroy()
+        ondestroy && ondestroy(el)
+    }    
 
-    return el
+    return velement
 }

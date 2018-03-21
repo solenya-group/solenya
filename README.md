@@ -22,7 +22,7 @@ https://github.com/pickle-ts/pickle-samples
   * [Advanced Updates](#advanced-updates)
 - [Views](#views)
   * [Lifecycle Events](#lifecycle-events)
-  * [The Lifecycle Function](#the-lifecycle-function)
+  * [Lifecycle Composition and State](#lifecycle-composition-and-state)
   * [DOM keys](#dom-keys)
 - [App](#app)
 - [Time Travel](#time-travel)
@@ -243,7 +243,7 @@ To write a reusable view, your first approach should be to merely write a functi
 
 ## Lifecycle Events
 
-For the most part, views are pure functions of state. However, the DOM can have additional state, such as inputs that have focus and selections. Furthermore, animations, at a low level, need to interact with DOM bypassing the virtual DOM. This is for both performance reasons (as you don't want to invoke the GC), as well as keeping your application state logic separated from your animation state. For example, if you delete an item from a list, it's a simplifying assumption for your application state to consider that item gone, but you'll want that item to live a little longer in the real DOM to gracefully exit.
+For the most part, views are pure functions of state. However, the DOM can have additional state, such as inputs that have focus and selections. Furthermore, animations, at a low level, need to interact with the DOM bypassing the virtual DOM. This is for both performance reasons (as you don't want to invoke the GC), as well as keeping your application state logic separated from your animation state. For example, if you delete an item from a list, it's a simplifying assumption for your application state to consider that item gone, but you'll want that item to live a little longer in the real DOM to gracefully exit.
 
 To interact with the DOM directly, you provide lifecycle callbacks on your virtual DOM elements. The lifecycle callbacks are the same as Ultradom: `oncreate`, `onupdate`, `onremove`, and `ondestroy`. Here's how you might plug in some focusing logic when the real DOM element is created:
 
@@ -254,38 +254,49 @@ To interact with the DOM directly, you provide lifecycle callbacks on your virtu
 ```
 When your virtual div element is turned into an actual div element, your `oncreate` callback is passed the actual div element.
 
-## The lifecycle function
+## Lifecycle Composition and State
 
-You can also use the `lifecycle` function to compose lifecycle events. This is very convenient when handling multiple lifecycle events, for handling transitory state across lifecycle events, and for handling the same lifecycle hooks more than once, by layering the hooks like an onion.
+The `lifecycleListener` function builds on lower level lifecycle events to make it easier for you to statefully handle the lifecycle of an element.
 
-The high level code to animate a div would look like:
+Here's how we can add a custom `slide` animation to a div:
 
 ```typescript
-someAnimation (
-    div ({ key: "widget1", class: "widget"})
+slide (
+    div ({ class: "widget"})
 )
 ```
-Where `someAnimation` could be implemented like:
+We can implement the `slide` function using the [popmotion-pose](https://github.com/Popmotion/popmotion/tree/master/packages/popmotion-pose) animation library as follows:
 
 ```typescript
-import { VElement, VAttributes, lifecycle } from 'pickle'
-
-export function someAnimation (config: AnimationConfig, el: VElement)
-{
-    return lifecycle (el, {
-        oncreate (el: Element, attributes: VAttributes) {
-            // possibly attach some state to el for use across multiple lifecycle invocations
-        },
-        onupdate (el: Element, attributes: VAttributes) {
-            ...
-        },
-        onremove (el: Element, remove: () => void) {
-            ...
+export function slide (vel: VElement)
+{   
+    return lifecycleListener (vel, el => {
+        const poser = pose (el, {
+            duration:2000,
+            initialPose: 'preopen',        
+            preopen: { x: '-100%', opacity: 0 },
+            open: { x: '0%', opacity: 1},
+            close: { x: '200%', opacity: 0 }
+        })
+        return {  
+            async remove () { 
+                await poser.set("close")
+            }   
         }
     })
 }
 ```
-`lifecycle` takes and an object with lifecycle hooks, and returns the same element combining hooks if necessary.
+The `lifecycleListener` function lets us provide an *interface* for handling lifecycle callbacks:
+
+```typescript
+export interface LifecycleListener
+{
+    update?() : void
+    remove?() : Promise<void>
+    destroy?() : void
+}
+```
+We create our interface instance when the real DOM element is created. `remove` is a `Promise` to allow a delay between removing the virtual vs real DOM node (when `destroy` is called). In our  example, this time is used for a close animation.
 
 By design, these lifecycle events are not present on pickle components. Pickle components manage application state, only affecting DOM state via the virtual DOM. This lets you separate the very different lifecycles of application state and DOM state, making your code easier to maintain.
 

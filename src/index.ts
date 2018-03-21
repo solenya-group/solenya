@@ -3,7 +3,7 @@ export { App } from './app'
 export { TimeTravel } from './timeTravel'
 export { Storage } from './storage'
 export { VElement, VNode, VAttributes, VLifecycle, isVElement, createVElement, merge } from './dom'
-export { lifecycle } from './lifecycle'
+export { lifecycleListener, LifecycleListener } from './lifecycle'
 export { literal, KeyValue, isNullOrEmpty, key, Let } from './util'
 export { selector, commandButton, commandLink, inputer, labeledInput, slider, radioGroup } from './widgets'
 export {

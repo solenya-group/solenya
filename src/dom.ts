@@ -5,6 +5,7 @@ export interface VElement {
     attributes: VAttributes
     children: VNode[]
     key?: string | number
+    lifecycleListenerCount?: number // pickle mod
 }
 
 export type VNode = VElement | string | number
@@ -99,28 +100,16 @@ function getKey(node: VNode) {
     return isVElement(node) ? node.key : null
 }
 
+// pickle mods (needs to work with qt browser)
 function updateAttribute(element: Element, name: string, value: any, oldValue: any, isSVG: boolean) {
-    if (name === "key") {
-    // pickle mod - use style strings rather than objects; works better with workflow of transitioning styles from ts to css
-    //} else if (name === "style") {
-    //    for (var i in merge(oldValue, value)) {
-    //        element[name][i] = value == null || value[i] == null ? "" : value[i]
-    //    }
-    } else {
-        if (
-            typeof value === "function"// ||
-            //(name in element && name !== "list" && !isSVG) // with this condition, below element indexer set silently fails on qt browser
-        ) {
-            
-                element[name] = value // == null ? "" : value
-        } else if (value != null && value !== false) {
-            element.setAttribute(name, value)
-        }
-
-        if (value == null || value === false) {
-            element.removeAttribute(name)
-        }
-    }
+    if (name === "key")
+        return
+    if (typeof value === "function")
+        element[name] = value
+    else if (value != null && value !== false)
+        element.setAttribute(name, value)        
+    if (value == null || value === false)
+        element.removeAttribute(name)
 }
 
 function createNode(vnode: VNode, callbacks: any[], isSVG: boolean) {
@@ -205,15 +194,25 @@ function removeChildren(element: Element, node: VNode) {
 
 function removeElement(parent: Element, element: Element, velement: VElement) {
     function done() {
-        parent.removeChild(removeChildren(element, velement))
+        removeChildren(element, velement)
+        parent.removeChild(element)
     }
+    element["removing"] = true
 
     var cb = velement.attributes && velement.attributes.onremove
     if (cb) {
         cb(element, done)
-    } else {
+    } else {    
         done()
     }
+}
+
+function activeNodes (nodes: NodeList) {
+    var activeNodes = []
+    for (var x = 0; x < nodes.length; x++)
+        if (nodes[x]["removing"] !== true)
+            activeNodes.push (nodes[x])
+    return activeNodes
 }
 
 function patchElement(
@@ -252,10 +251,11 @@ function patchElement(
         var oldElements: Node[] = []
         var oldChildren = (<VElement>oldVNode).children
         var children = (<VElement>vnode).children
+        
+        var active = activeNodes (node!.childNodes) // pickle mod (allow asynchronous removes)
 
         for (var i = 0; i < oldChildren.length; i++) {
-            oldElements[i] = node!.childNodes[i]
-
+            oldElements[i] = active[i] // pickle mod
             var oldKey = getKey(oldChildren[i])
             if (oldKey != null) {
                 oldKeyed[oldKey] = [oldElements[i], oldChildren[i]]
