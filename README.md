@@ -271,13 +271,12 @@ We can implement the `slide` function using the [popmotion-pose](https://github.
 export function slide (vel: VElement)
 {   
     return lifecycleListener (vel, el => {
-        const poser = pose (el, {
-            duration:2000,
-            initialPose: 'preopen',        
-            preopen: { x: '-100%', opacity: 0 },
-            open: { x: '0%', opacity: 1},
-            close: { x: '200%', opacity: 0 }
+        const poser = pose (el, <any>{
+            initialPose: 'close',
+            open: { x: '0%' },
+            close: { x: '-100%' }
         })
+        poser.set ('open')
         return {  
             async remove () { 
                 await poser.set("close")
