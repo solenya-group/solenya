@@ -15,16 +15,19 @@ export interface VAttributes extends VLifecycle {
 }
 
 export interface VLifecycle {
-    oncreate? (element: Element, attributes?: VAttributes) : void
-    onupdate? (element: Element, attributes?: VAttributes) : void
+    onadd? (element: Element, attributes?: VAttributes) : void // pickle mod
+    onbeforeupdate? (element: Element, attributes?: VAttributes) : void // pickle mod
+    onafterupdate? (element: Element, attributes?: VAttributes) : void // pickle mod
     onremove? (element: Element, remove: () => void) : void
     ondestroy? (element: Element) : void
 }
 
+// pickle mod
 export function isVElement(vnode?: VNode): vnode is VElement {
     return vnode && vnode["attributes"]
 }
 
+// pickle mod
 function squash (children:any[]) {
     var squashed: any[] = []
     for (var x of children)
@@ -60,11 +63,11 @@ export function patch (velement: VElement, element?: Element) {
         element && (<any>element).parentNode,
         element,
         element && (<any>element).node == null
-            ? recycleVElement(element, [].map)
+            ? recycleElement(element, [].map)
             : element && (<any>element).node,
         velement,
         lifecycleCallbacks,
-        element != null && (<any>element).node == null // isRecycling
+        element != null && (<any>element).node == null // is recycling
     )
 
     element["node"] = velement // pickle mod
@@ -75,14 +78,14 @@ export function patch (velement: VElement, element?: Element) {
     return element
 }
 
-function recycleVElement(element: Element, map: Function) {
+function recycleElement(element: Element, map: Function) {
     return {
         nodeName: element.nodeName.toLowerCase(),
         attributes: {},
         children: map.call(element.childNodes, function (element: Element) {
             return element.nodeType === 3 // Node.TEXT_NODE
                 ? element.nodeValue
-                : recycleVElement(element, map)
+                : recycleElement(element, map)
         })
     }
 }
@@ -124,9 +127,9 @@ function createNode(vnode: VNode, callbacks: any[], isSVG: boolean) {
         var attributes = vnode.attributes 
         if (attributes) {
 
-            if (attributes.oncreate) {
+            if (attributes.onadd) {
                 callbacks.push(function () {
-                    attributes.oncreate!(<Element>node, attributes) // pickle mod
+                    attributes.onadd!(<Element>node, attributes) // pickle mod
                 })
             }
 
@@ -167,12 +170,16 @@ function updateElement(
             )
         }
     }
-    
-    var cb = isRecycling ? attributes.oncreate : attributes.onupdate
+    // pickle mods
+    if (! isRecycling && attributes.onbeforeupdate) {
+        attributes.onbeforeupdate(element, attributes)
+    }
+
+    var cb = isRecycling ? attributes.onadd : attributes.onafterupdate
     if (cb) {
         callbacks.push(function () {
             cb!(element, oldAttributes)
-        })
+        })            
     }
 }
 
@@ -267,7 +274,7 @@ function patchElement(
 
         while (k < children.length) {
             var oldKey = getKey(oldChildren[i])
-            var newKey = getKey((children[k] = children[k]))
+            var newKey = getKey(children[k])
 
             if (oldKey && newKeyed[oldKey]) { // pickle mod
                 i++

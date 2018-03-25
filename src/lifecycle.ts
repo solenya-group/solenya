@@ -2,7 +2,8 @@
 
 export interface LifecycleListener
 {
-    update?() : void
+    beforeUpdate?() : void
+    afterUpdate?() : void
     remove?() : Promise<void>
     destroy?() : void
 }
@@ -10,20 +11,26 @@ export interface LifecycleListener
 export function lifecycleListener (velement: VElement, createLifecycleListener: (el: Element) => LifecycleListener)
 {   
     const attributes = velement.attributes
-    const {oncreate, onupdate, onremove, ondestroy} = velement.attributes
+    const {onadd, onbeforeupdate, onafterupdate, onremove, ondestroy} = velement.attributes
 
     velement.lifecycleListenerCount = (velement.lifecycleListenerCount || 0) + 1
     const lid = "lifecycleListener" + velement.lifecycleListenerCount
 
-    attributes.oncreate = (el, attrs) => {  
+    attributes.onadd = (el, attrs) => {  
         const life = el[lid] = createLifecycleListener(el)
-        oncreate && oncreate(el, attrs)    
+        onadd && onadd(el, attrs)    
     }
 
-    attributes.onupdate = (el, attrs) => {                   
+    attributes.onbeforeupdate = (el, attrs) => {                   
         const life = el[lid] as LifecycleListener
-        life.update && life.update()
-        onupdate && onupdate(el, attrs)
+        life.beforeUpdate && life.beforeUpdate()
+        onbeforeupdate && onbeforeupdate(el, attrs)
+    }
+
+    attributes.onafterupdate = (el, attrs) => {                   
+        const life = el[lid] as LifecycleListener
+        life.afterUpdate && life.afterUpdate()
+        onafterupdate && onafterupdate(el, attrs)
     }
 
     attributes.onremove = async (el, rem) => {  

@@ -26,11 +26,10 @@ export function inputer(propertyAccess: () => any, inputAction: (propertyChange:
     var handler = handlePropertyChange (propertyAccess, inputAction)
     return input(
         {
-            value: Let(propertyAccess(), value =>
-                typeof value === "number" && isNaN (value) ? "" : value
-            ),   
+            value: propertyAccess() || "",  
             oninput: handler,
-            onchange: handler
+            onchange: handler,
+            onafterupdate: (el: any) => el.value = propertyAccess() || "" 
         },
         ...values
     )
@@ -123,7 +122,7 @@ export function radioGroup
                     type: "radio",
                     checked: fuzzyEquals(pair[0], propertyAccess()) ? "checked" : undefined,
                     onchange: handlePropertyChange (propertyAccess, checkedAction),
-                    onupdate: (element: HTMLInputElement, attributes?: VAttributes) => {
+                    onafterupdate: (element: HTMLInputElement, attributes?: VAttributes) => {
                         element.checked = element.getAttribute ("checked") == "checked"
                     }
                 }),

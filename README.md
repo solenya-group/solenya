@@ -24,6 +24,7 @@ https://github.com/pickle-ts/pickle-samples
   * [Lifecycle Events](#lifecycle-events)
   * [Lifecycle Composition and State](#lifecycle-composition-and-state)
   * [DOM keys](#dom-keys)
+  * [Animating a list](#animating-a-list)
 - [App](#app)
 - [Time Travel](#time-travel)
 - [Serialization](#serialization)
@@ -47,7 +48,7 @@ Pickle is a small library for writing client-side web apps. Core features:
 * *Stateful* components with *stateless* views
 * Serializable, composable, inheritable components
 * Unified approach to time travel debugging, hot module reloading, transactions, undo/redo
-* Virtual DOM (Ultradom)
+* Virtual DOM (forked from Ultradom)
 * Typescript orientation
 * DRY as possible
 
@@ -245,14 +246,32 @@ To write a reusable view, your first approach should be to merely write a functi
 
 For the most part, views are pure functions of state. However, the DOM can have additional state, such as inputs that have focus and selections. Furthermore, animations, at a low level, need to interact with the DOM bypassing the virtual DOM. This is for both performance reasons (as you don't want to invoke the GC), as well as keeping your application state logic separated from your animation state. For example, if you delete an item from a list, it's a simplifying assumption for your application state to consider that item gone, but you'll want that item to live a little longer in the real DOM to gracefully exit.
 
-To interact with the DOM directly, you provide lifecycle callbacks on your virtual DOM elements. The lifecycle callbacks are the same as Ultradom: `oncreate`, `onupdate`, `onremove`, and `ondestroy`. Here's how you might plug in some focusing logic when the real DOM element is created:
+To interact with the DOM directly, you provide lifecycle callbacks on your virtual DOM elements. The lifecycle callbacks should be familiar to anyone familar with a virtual dom:
+
+```
+export interface VLifecycle
+{
+    onadd? (element: Element, attributes?: VAttributes) : void
+    onbeforeupdate? (element: Element, attributes?: VAttributes) : void
+    onafterupdate? (element: Element, attributes?: VAttributes) : void    
+    onremove? (element: Element, remove: () => void) : void
+    ondestroy? (element: Element) : void
+}
+```
+`onadd` is called after the element is added to the DOM, and `onremove` before it's removed from the DOM.
+
+`onremove` itself takes a callback, enabling remove to operate asynchronously. When that operation is completed, the `remove` callback should be called, which will then invoke the `ondestroy` callback.
+
+The `onbeforeupdate` and `onafterupdate` callbacks occur before and after a DOM node is updated.
+
+Here's how you might plug in some focusing logic when an element is added to the DOM:
 
 ```typescript
  div ({
-     oncreate: (el: Element, attrs: VAttributes) => handleFocus (el...)
+     onadd: (el: Element, attrs: VAttributes) => handleFocus (el...)
     ...
 ```
-When your virtual div element is turned into an actual div element, your `oncreate` callback is passed the actual div element.
+When the patcher adds an element to the DOM corresponding to your virutal div element, it invokes the `onadd` callback.
 
 ## Lifecycle Composition and State
 
@@ -290,7 +309,8 @@ The `lifecycleListener` function lets us provide an *interface* for handling lif
 ```typescript
 export interface LifecycleListener
 {
-    update?() : void
+    beforeUpdate?() : void
+    afterUpdate?() : void
     remove?() : Promise<void>
     destroy?() : void
 }
@@ -308,6 +328,52 @@ div ({key: wizardPage})
 ```
 If the key changes, the patcher now knows to definitely recreate that DOM element. This means even if your next wizard page happened to have an input that could have been updated, that instead it will be replaced, predictably resetting DOM state like focus and selections, and invoking any animations that should occur on element creation.
 
+## Animating a List
+
+Let's put the concepts together in the previous sections to shuffle an array, where each element gracefully moves to its new position each time the array its updated.
+
+We can use lodash's shuffle function to `shuffle` an array, and our own `slideChildren` function to perform the animation. We'll need to make sure each item in the array has a unique `key`, so that the patcher knows to reuse the element.
+
+```
+export class AnimateListExample extends Component
+{
+    @Exclude() items = range (1, 20)
+
+    view () {        
+        return div(
+            myButton (() => this.shuffle (), "shuffle"),       
+            slideChildren (ul (this.items.map (n => li ({ key: n }, n))))
+        )
+    }
+
+    shuffle() {
+        this.update (() => this.items = shuffle (this.items))
+    }
+}
+```
+We can implement `slideChildren` using `lifecycleListener` and the [FLIP](https://aerotwist.com/blog/flip-your-animations/) technique, implemented with the `popmotion-pose` library:
+```
+export function slideChildren (vel: VElement) : VElement
+{
+    return lifecycleListener (vel, el => {        
+        return {            
+            beforeUpdate () {                
+                for (var c of Array.from(el.childNodes) as Element[]) {
+                    var poser = c["poser"] = pose(c, {})
+                    poser.measure()
+                }
+            },
+            afterUpdate() {
+                for (var c of Array.from(el.childNodes) as Element[]) {
+                    var poser = c["poser"]
+                    if (poser)
+                        poser.flip ()
+                }
+            }
+        }               
+    })   
+}
+```
 # App
 
 To start Pickle, pass the constructor of your top level component into your App instance, with a string defining the id of the element where you app will be hosted. You must also import `reflect-metadata` before any of your classes are loaded. For example:
