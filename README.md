@@ -355,23 +355,18 @@ We can implement `slideChildren` using `lifecycleListener` and the [FLIP](https:
 ```
 export function slideChildren (vel: VElement) : VElement
 {
-    return lifecycleListener (vel, el => {        
-        return {            
-            beforeUpdate () {                
-                for (var c of Array.from(el.childNodes) as Element[]) {
-                    var poser = c["poser"] = pose(c, {})
-                    poser.measure()
-                }
+    return lifecycleListener (vel, el => {
+        var posers: Poser[]
+        return {
+            beforeUpdate () {
+                posers = Array.from (el.childNodes).map (c => pose (c as Element, {}))
+                posers.forEach (p => p.measure())
             },
             afterUpdate() {
-                for (var c of Array.from(el.childNodes) as Element[]) {
-                    var poser = c["poser"]
-                    if (poser)
-                        poser.flip ()
-                }
+                posers.forEach (p => p.flip())
             }
-        }               
-    })   
+        }            
+    })
 }
 ```
 # App
