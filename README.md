@@ -23,7 +23,7 @@ Github: https://github.com/pickle-ts/pickle-samples
 - [Views](#views)
   * [DOM keys](#dom-keys)
   * [Lifecycle Events](#lifecycle-events)
-  * [lifecycleListener](#lifecycleListener)    
+  * [lifecycleListener](#lifecyclelistener)    
 - [App](#app)
 - [Time Travel](#time-travel)
 - [Serialization](#serialization)
@@ -279,7 +279,7 @@ Here's how you might plug in some focusing logic when an element is added to the
 ```
 When the patcher adds an element to the DOM corresponding to your virutal div element, it invokes the `onadd` callback.
 
-You could also achieve the same results using a `lifecycleListener` like this:
+You could also achieve the same result using a `lifecycleListener`:
 
 ```typescript
  lifecycleListener (div (...), {        
