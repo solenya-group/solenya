@@ -5,7 +5,6 @@ export interface VElement {
     attributes: VAttributes
     children: VNode[]
     key?: string | number
-    lifecycleListenerCount?: number // pickle mod
 }
 
 export type VNode = VElement | string | number
