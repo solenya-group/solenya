@@ -21,9 +21,9 @@ Github: https://github.com/pickle-ts/pickle-samples
 - [Updates](#updates)
   * [Advanced Updates](#advanced-updates)
 - [Views](#views)
-  * [DOM keys](#dom-keys)
   * [Lifecycle Events](#lifecycle-events)
-  * [lifecycleListener](#lifecyclelistener)    
+  * [DOM Keys](#dom-keys)    
+  * [Animating a List](#animating-a-list)
 - [App](#app)
 - [Time Travel](#time-travel)
 - [Serialization](#serialization)
@@ -239,15 +239,6 @@ You can add as may optional parameters as you want to your child component `View
 
 To write a reusable view, your first approach should be to merely write a function that returns a `VElement`. However, if your view function ends up requiring callbacks to write state back to a component, then you should probably rewrite that view as a component itself, to better encapsulate that state logic.
 
-## DOM Keys
-
-After each update, the virtual DOM is patched. It does this by comparing the current virtual DOM tree to the new previous one, and modifying the real DOM accordingly. However, the patching algorithm can't know your intent, and so occassionally does the wrong thing. It may try to reuse an element that you definitely want to replace, or it may try to replace a list of child elements, when you merely wanted to reorder. To better determine the creation and destruction of DOM nodes, provide *keys* for your virtual DOM nodes. For example:
-
-```typescript
-div ({key: wizardPage})
-```
-If the key changes, the patcher now knows to definitely recreate that DOM element. This means even if your next wizard page happened to have an input that could have been updated, that instead it will be replaced, predictably resetting DOM state like focus and selections, and invoking any animations that should occur on element creation.
-
 ## Lifecycle Events
 
 For the most part, views are pure functions of state. However, DOM elements can have additional state, such as inputs that have focus and selections. Furthermore, animations, at a low level, need to interact with the DOM bypassing the virtual DOM. This is for both performance reasons (as you don't want to invoke the GC), as well as keeping your application state logic separated from your animation state. For example, if you delete an item from a list, it's a simplifying assumption for your application state to consider that item gone, but you'll want that item to live a little longer in the real DOM to gracefully exit.
@@ -279,21 +270,33 @@ Here's how you might plug in some focusing logic when an element is added to the
 ```
 When the patcher adds an element to the DOM corresponding to your virutal div element, it invokes the `onadd` callback.
 
-You could also achieve the same result using a `lifecycleListener`:
+Lifecycle callbacks automatically compose. So both `onadd` functions will be called here, in the order of appearance:
 
 ```typescript
- lifecycleListener (div (...), {        
-        onadd (el: Element, attrs: VAttributes) => handleFocus (el...)
- })
+ div (
+    {
+        onadd: (el: Element, attrs: VAttributes) => handleFocus (el...)
+    },
+    {
+        onadd: (el: Element, attrs: VAttributes) => handleSelection (el...)
+    }
+    ...
+ }
 ```
+## DOM Keys
 
-## lifecycleListener
+After each update, the virtual DOM is patched. The patcher compares the current virtual DOM tree to the previous one, and modifies the real DOM accordingly. However, the patching algorithm can't know your intent, and so occassionally does the wrong thing. It may try to reuse an element that you definitely want to replace, or it may try to replace a list of child elements that you merely wanted to reorder. To better determine the creation and destruction of DOM nodes, provide *keys* for your virtual DOM nodes. For example:
 
-The `lifecycleListener` function makes it easy to compose lifecycle callbacks.
-
-Let's shuffle an array, where each element gracefully moves to its new position each time the array its updated. We can use lodash's shuffle function to perform the `shuffle`, and our own `slideChildren` function to perform the animation. We'll need to make sure each item in the array has a unique `key`, so that the patcher knows to reuse each child element.
-
+```typescript
+div ({key: wizardPage})
 ```
+If the key changes, the patcher now knows to definitely recreate that DOM element. This means even if your next wizard page happened to have an input that could have been updated, that instead it will be replaced, predictably resetting DOM state like focus and selections, and invoking any animations that should occur on element creation.
+
+## Animating a List
+
+Let's combine the concepts in the previous sections to shuffle an array, where each element gracefully moves to its new position each time the array is updated. We can use lodash's shuffle function to perform the `shuffle`, and our own `slideChildren` function to perform the animation. We'll need to make sure each item in the array has a unique `key`, so that the patcher knows to reuse each child element.
+
+```typescript
 export class AnimateListExample extends Component
 {
     @Exclude() items = range (1, 20)
@@ -301,7 +304,7 @@ export class AnimateListExample extends Component
     view () {        
         return div(
             myButton (() => this.shuffle (), "shuffle"),       
-            slideChildren (ul (this.items.map (n => li ({ key: n }, n))))
+            ul (slideChildren(), this.items.map (n => li ({ key: n }, n)))
         )
     }
 
@@ -310,11 +313,11 @@ export class AnimateListExample extends Component
     }
 }
 ```
-We can implement `slideChildren` using `lifecycleListener` and the [FLIP](https://aerotwist.com/blog/flip-your-animations/) technique:
-```
-export function slideChildren (vel: VElement) : VElement
+We can implement `slideChildren` using the [FLIP](https://aerotwist.com/blog/flip-your-animations/) technique:
+```typescript
+export function slideChildren () : VLifecycle
 {
-    return lifecycleListener (vel, {                       
+    return {                       
         onbeforeupdate (el: Element) {                
             let els = el["state_slideChildren"] = Array.from(el.childNodes).map(c => (c as HTMLElement))
             els.forEach (c => measure(c))
@@ -323,12 +326,16 @@ export function slideChildren (vel: VElement) : VElement
             let els = el["state_slideChildren"] as HTMLElement[]
             els.forEach (c => flip (c))
         }                    
-    }) 
+    } 
 }
 ```
-`lifecycleListener` combines the callbacks on a `VElement` with a `Vlifecycle`. If you need to maintain state across lifecycle callbacks, store it directly on the DOM element.
-
 By design, these lifecycle events are not present on pickle components. Pickle components manage application state, only affecting DOM state via the virtual DOM. This lets you separate the very different lifecycles of application state and DOM state, making your code easier to maintain.
+
+While there's always pragmatic exceptions, the principles of pickle state are:
+
+ * Application state belongs on components.
+ * DOM state belongs on DOM elements.
+ * No state belongs on virtual DOM elements.
 
 # App
 

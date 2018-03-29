@@ -1,19 +1,25 @@
-﻿import { createVElement, VElement, isVElement, merge } from './dom'
+﻿import { createVElement, VElement, isVElement, merge, VAttributes } from './dom'
+import { combineLifecycles } from './lifecycle'
 
 export function h (tag: string, ...values: any[]): VElement
 {
-    var attributes = {}
+    var attributes = null
     while (values.length > 0) {
         var head = values[0]        
         if (head != null && typeof head == "object" && ! isVElement(head) && ! Array.isArray(head)) {
-            attributes = merge (attributes, head)
+            if (! attributes)
+                attributes = head
+            else {
+                combineLifecycles (attributes, head)
+                attributes = merge (attributes, head)
+            }
             values = values.slice(1)
         }
         else
             break
     }
 
-    return createVElement (tag, attributes, ...values)        
+    return createVElement(tag, attributes || {}, ...values)        
 }
 
 export function a(...values: any[]) {

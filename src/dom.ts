@@ -89,11 +89,11 @@ function recycleElement(element: Element, map: Function) {
     }
 }
 
-export function merge(target: any, source: any) { // pickle mod
+export function merge (dominant: any, recessive: any) { // pickle mod
     var obj = {}
 
-    for (var i in target) obj[i] = target[i]
-    for (var i in source) obj[i] = source[i]
+    for (var i in recessive) obj[i] = recessive[i]
+    for (var i in dominant) obj[i] = dominant[i]
 
     return obj
 }
@@ -153,7 +153,7 @@ function updateElement(
     isRecycling: boolean,
     isSVG: boolean
 ) {   
-    for (var name in merge(oldAttributes, attributes)) {
+    for (var name in merge (attributes, oldAttributes)) {
         if (
             attributes[name] !==
             (name === "value" || name === "checked"
