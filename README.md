@@ -6,7 +6,8 @@ The library is new, small, and easy to modify, so consider copying the source fi
 
 # Samples
 
-Github: https://github.com/pickle-ts/pickle-samples
+* Github: https://github.com/pickle-ts/pickle-samples
+* Code Sandbox: https://codesandbox.io/u/pickle-ts
 
 # Table of Contents
 
@@ -33,7 +34,6 @@ Github: https://github.com/pickle-ts/pickle-samples
 - [Async](#async)
 - ['this' Rules](#-this--rules)
 - [HTML Helpers](#html-helpers)
-- [TSX](#tsx)
 - [Task List App](#task-list-app)
 - [Beyond Immutability](#beyond-immutability)
 - [Use With...](#use-with)
@@ -71,6 +71,8 @@ export class Counter extends Component
     }
 }
 ```
+[[Open Sample in Code Sandbox](https://codesandbox.io/s/o5n8mr1j8y)]
+
 Components can have state — in this case `count`.
 
 Components have a `view` method, which is a pure non side effecting function of the component's state. Views are rendered with a virtual DOM, such that the real DOM is efficiently patched with only the changes since the last update.
@@ -107,6 +109,8 @@ export class TwinCounters extends Component
     }
 }
 ```
+[[Open Sample in Code Sandbox](https://codesandbox.io/s/641qqzzy3w)]
+
 Components must have parameterless constructors, though they may include *optional* arguments.
 
 Child components should be created in the constructors, field initialisers, and updates of their parents.
@@ -120,6 +124,8 @@ export class Tree extends Component
     ...
 }
 ```
+[[Open Sample in Code Sandbox](https://codesandbox.io/s/2335v07yq0)]
+
 ## How it Works
 
 After the root component is created, it's attached to the `App` object. Once attached, each update traverses the component hierarchy ensuring each child has its `parent` property set. This enables updates to a child to bubble up to the root component, which triggers the `App` to refresh, which will then call the root component's `view` method.
@@ -135,8 +141,8 @@ To make writing forms easier, pickle provides some widget functions for common i
 ```typescript
 export class BMI extends Component
 {
-    height: number = 180
-    weight: number = 80
+    height = 180
+    weight = 80
 
     calc () {
         return this.weight / (this.height * this.height / 10000)
@@ -159,6 +165,8 @@ export class BMI extends Component
     }
 }
 ```
+[[Open Sample in Code Sandbox](https://codesandbox.io/s/9j75lwlzkp)]
+
 The `updateProperty` callback takes a `KeyValue` argument, which has a key and value that map to the Component property name and new value. `updateProperty` calls through to the component's `update` for you, which is explained in the next section.
 
 **Always initialise component fields explicitly, and for numbers use NaN rather than undefined**. This is because **Typescript transpiles away property types**, meaning that at runtime pickle can't know whether it's dealing with a string or number, and assumes an undefined value is a string by default, in the absence of a runtime value.
@@ -329,6 +337,8 @@ export function slideChildren () : VLifecycle
     } 
 }
 ```
+[[Open Sample in Code Sandbox](https://codesandbox.io/s/yk42wxnvyz)]
+
 By design, these lifecycle events are not present on pickle components. Pickle components manage application state, only affecting DOM state via the virtual DOM. This lets you separate the very different lifecycles of application state and DOM state, making your code easier to maintain.
 
 While there's always pragmatic exceptions, the principles of pickle state are:
@@ -476,7 +486,11 @@ Use ordinary class methods, not function members when calling update. Otherwise 
 ```
 # HTML Helpers
 
-The HTML helpers take a spread of attribute objects, elements, and primitive values. Attribute objects go first. Some examples:
+The HTML helpers take a spread of attribute objects, elements, and primitive values. Picke has been designed to work well with Typescript, so your IDE can provide statement completion:
+
+![pickle flow diagram](pickle-intellisense.png "Pickle Flow Diagram")
+
+Attribute objects go first. Some examples:
 
 ```typescript
 div ()                                  // empty
@@ -500,48 +514,6 @@ button (
 )
 ```
 
-# TSX
-
-Here's the counter example rewritten with tsx:
-
-```typescript
-import { Component, h } from '../pickle/pickle'
-
-export class Counter extends Component
-{
-    count: number = 0
-
-    view () {
-        return (
-            <div> 
-                <button onclick={() => this.add(-1)}>-</button>
-                    {this.count}
-                <button onclick={() => this.add(+1)}>+</button>
-            </div>        
-        )
-    }
-    
-    add (x: number) {
-        return this.update (() => this.count += x)
-    } 
-}
-```
-To use tsx with pickle, you must:
-
-1) In each .tsx file, include the 'h' function from pickle, as element tags get converted into calls to `h`
-2) In your project, create a file called `jsx.d.ts` with the following:
-```
-import { VElement } from 'pickle-ts'
-
-declare global {
-    namespace JSX {
-        interface Element<Data> extends VElement { }
-        interface IntrinsicElements {
-            [elemName: string]: any
-        }
-    }
-}
-```
 # Task List App
 It's common for client-side web frameworks to demonstrate how they'd write a task app. Here's how you write one in pickle:
 
@@ -580,6 +552,8 @@ export class Todos extends Component
     }
 }
 ```
+[[Open Sample in Code Sandbox](https://codesandbox.io/s/6l3q7w65qz)]
+
 Notes:
 * Keep things simple! Only write components if they need to manage their own state. In this case, we didn't need a sub component for an individual task.
 * In a real application, we'd probably have a unique key associated with each todo item, rather than identifying the todo item by name.
