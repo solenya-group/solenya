@@ -10,7 +10,7 @@ export interface VElement {
 export type VNode = VElement | string | number
 
 export interface VAttributes extends VLifecycle {
-    key?: string | number
+    key?: string | number    
 }
 
 export interface VLifecycle {

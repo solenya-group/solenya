@@ -47,7 +47,7 @@ export function slider (propertyAccess: () => any, min: number, max: number, ste
     var handler = handlePropertyChange (propertyAccess, slideAction)
     return input (
         {
-            type: "range",
+            type: "range",           
             min: min,
             max: max,
             value: propertyAccess(),
