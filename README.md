@@ -34,6 +34,7 @@ The library is new, small, and easy to modify, so consider copying the source fi
 - [Async](#async)
 - ['this' Rules](#-this--rules)
 - [HTML Helpers](#html-helpers)
+- [Style](#style)
 - [Task List App](#task-list-app)
 - [Beyond Immutability](#beyond-immutability)
 - [Use With...](#use-with)
@@ -49,6 +50,7 @@ Pickle is a small library for writing client-side web apps. Core features:
 * Unified approach to time travel debugging, hot module reloading, transactions, undo/redo
 * Virtual DOM (forked from Ultradom)
 * Typescript orientation
+* Typestyle integrated
 * DRY as possible
 
 Let's start with a counter component:
@@ -73,9 +75,9 @@ export class Counter extends Component
 ```
 [[Open Sample in Code Sandbox](https://codesandbox.io/s/o5n8mr1j8y)]
 
-Components can have state — in this case `count`.
+In pickle, application state lives in your components — in this case `count`.
 
-Components have a `view` method, which is a pure non side effecting function of the component's state. Views are rendered with a virtual DOM, such that the real DOM is efficiently patched with only the changes since the last update.
+Components can optionally implement a `view` method, which is a pure non side effecting function of the component's state. Views are rendered with a virtual DOM, such that the real DOM is efficiently patched with only the changes since the last update.
 
 Components update their state exclusively via the their `update` method, which will automatically refresh the view.
 
@@ -85,11 +87,11 @@ A pickle app outputs a virtual DOM node as a pure function of its state. On each
 
 Components help you factor your app into reusable parts, or parts with separate concerns. An app has a reference to your root component.
 
-Components are designed to be serializable. By default, your component tree is serialized on each update. This provides a unified approach to time travel debugging, hot module reloading, transactions, and undo/redo. Serialization is covered in more detail in the serialization section.
+Components are designed to be serializable. When autosave or time travel is on, your component tree is serialized on each update. This provides a unified approach to time travel debugging, hot module reloading, transactions, and undo/redo. Serialization is covered in more detail in the serialization section.
 
 ![pickle flow diagram](pickle-flow-diagram.png "Pickle Flow Diagram")
 
-This flow diagram represents updating a GrandChild2 component.
+This flow diagram represents updating a GrandChild2 component. In this case, we have a very simple application, where the view tree mirrors the component tree. As an application gets larger, the view tree will typically only represent a subset of the component tree. For example, in an application with wizard steps, the component tree would probably have *every* wizard step, while the view tree would only have the *current* wizard step. 
 
 # Composition
 
@@ -111,7 +113,7 @@ export class TwinCounters extends Component
 ```
 [[Open Sample in Code Sandbox](https://codesandbox.io/s/641qqzzy3w)]
 
-Components must have parameterless constructors, though they may include *optional* arguments.
+Components must have parameterless constructors, though they may include *optional* arguments. This small design restriction enables `class-transformer`'s deserializer to work.
 
 Child components should be created in the constructors, field initialisers, and updates of their parents.
 
@@ -486,7 +488,7 @@ Use ordinary class methods, not function members when calling update. Otherwise 
 ```
 # HTML Helpers
 
-The HTML helpers take a spread of attribute objects, elements, and primitive values. Picke has been designed to work well with Typescript, so your IDE can provide statement completion:
+The HTML helpers take a spread of attribute objects, elements, and primitive values. Pickle has been designed to work well with Typescript, so your IDE can provide statement completion:
 
 ![pickle flow diagram](pickle-intellisense.png "Pickle Flow Diagram")
 
@@ -496,7 +498,7 @@ Attribute objects go first. Some examples:
 div ()                                  // empty
 div ("hello")                           // primitive value
 div ({id: 1})                           // attribute
-div ({id: 1, class:"foo"})              // multiple attributes
+div ({id: 1, class: "foo"})                   // multiple attributes
 div ({id: 1}, "hello")                  // attribute followed by element
 div (div ())                            // nested elements
 div ({id: 1}, "hello", div("goodbye"))  // combination
@@ -513,6 +515,49 @@ button (
     { onclick : () => this.add (1) }, "+"
 )
 ```
+
+# Style
+
+Pickle accepts [typestyle](https://github.com/typestyle/typestyle) objects for style attributes, letting you write css in typescript. This enables you to abstract and organize your styles with typescript. This lets you express styles in a language (i.e. typescript) that's far more powertful than any stylesheet language, and eliminates the seam between your view funtions and styles. The last point makes it trivial to co-locate your code with your styles, or provide exactly the appropriate level of coupling to maximise maintainability.
+
+```typescript
+div ({style: {color:'green' }}, 'pickle')
+```
+Pickle will call typestyle's `style` function on the object you provide. It's as if you called:
+
+```typescript
+div ({class: style ({color:'green'})}, 'pickle')
+```
+If you need to reuse a style, then don't inline the style: declare it as a variable and refer to it in your class attribute. You can factor it just as you please.
+
+Typestyle will dynamically create a small unique class name, and add css to the top of your page. So the following:
+
+```typescript
+div ({style: {color: 'green'} },
+    "pickle"
+)
+```
+Which will generate something like:
+
+```html
+<div class="fdwf33">
+    pickle
+</div>
+```
+With the following css:
+```css
+fdwf33 {
+    style: green;
+}
+```
+Pickle automatically combines css values. The following are equivalent:
+
+```typescript
+div ({class: "big"}, {class: "happy"})
+div ({class: "big happy"})
+```
+
+You may also use ordinary style strings, which bypasses the typestyle library.
 
 # Task List App
 It's common for client-side web frameworks to demonstrate how they'd write a task app. Here's how you write one in pickle:
@@ -557,7 +602,7 @@ export class Todos extends Component
 Notes:
 * Keep things simple! Only write components if they need to manage their own state. In this case, we didn't need a sub component for an individual task.
 * In a real application, we'd probably have a unique key associated with each todo item, rather than identifying the todo item by name.
-* Try passing in `{class: "your-class"}` as an additional argument to `commandButton` to customize the css.
+* Try passing in `{style: {color:red}}` as an additional argument to `commandButton` to customize the css.
 
 # Beyond Immutability
 
@@ -590,6 +635,9 @@ var newRoot =
 The other benefit of the transactional memory approach, is we can also have asynchronous methods that optimistically update `this` when continuing. Note that when we time travel, our `this` in that scenario is of course lost.
 
 # Use With...
+
+These libraries weren't mentioned, but are very useful:
+
 ## HTML History
 https://github.com/ReactTraining/history
 

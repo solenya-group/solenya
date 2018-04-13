@@ -1,5 +1,7 @@
 ﻿import { createVElement, VElement, VAttributes, VNode, VLifecycle, isVElement, merge } from './dom'
 import { combineLifecycles } from './lifecycle'
+import { style } from 'typestyle'
+import { NestedCSSProperties } from 'typestyle/lib/types'
 
 export interface HProps extends VAttributes, HAttributes {
     [key: string] : any
@@ -7,18 +9,40 @@ export interface HProps extends VAttributes, HAttributes {
 
 export type HValue = VNode | HProps | null | undefined
 
+function combineStyles (attributes: any, head: any)
+{
+    const existingCss = attributes && attributes['class']
+    const headCss = head['class']    
+    let css = (existingCss && headCss) ? (existingCss + ' ' +headCss) : existingCss || headCss
+
+    const headStyle = head["style"]
+
+    if (headStyle && typeof (headStyle) != 'string') {
+        css = ! css ? style (headStyle) : css + " " + style (headStyle)
+        head["style"] = undefined
+    }
+    if (css) {
+        if (attributes)
+            attributes["class"] = css
+        else
+            head["class"] = css
+    }
+}
+
 export function h (tag: string, ...values: HValue[]): VElement
 {
     var attributes = null
     while (values.length > 0) {
         var head = values[0]        
-        if (head != null && typeof head == "object" && ! isVElement(<any>head) && ! Array.isArray(head)) {
+        if (head != null && typeof head == "object" && ! isVElement(<any>head) && ! Array.isArray(head))
+        {
+            combineStyles (attributes, head)
             if (! attributes)
-                attributes = head
+                attributes = head            
             else {
-                combineLifecycles (attributes, <VLifecycle>head)
-                attributes = merge (attributes, head)
-            }
+                combineLifecycles (attributes, <VLifecycle>head)                
+                attributes = merge (attributes, head)           
+            }                   
             values = values.slice(1)
         }
         else
@@ -473,7 +497,7 @@ export interface HAttributes {
     form?: string
     formaction?: string
     headers?: string
-    height?: string
+    height?: number
     hidden?: string
     high?: number
     href?: string
@@ -534,7 +558,7 @@ export interface HAttributes {
     srcset?: string
     start?: string
     step?: number
-    style?: string
+    style?: string | NestedCSSProperties
     summary?: string
     tabindex?: number
     target?: string
