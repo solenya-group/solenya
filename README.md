@@ -541,7 +541,7 @@ button (
 
 # Style
 
-Pickle accepts [typestyle](https://github.com/typestyle/typestyle) objects for style attributes, letting you write css in typescript. This enables you to abstract and organize your styles with typescript. This lets you express styles in a language (i.e. typescript) that's far more powertful than any stylesheet language, and eliminates the seam between your view funtions and styles. The last point makes it trivial to co-locate your code with your styles, or provide exactly the appropriate level of coupling to maximise maintainability.
+Pickle accepts [typestyle](https://github.com/typestyle/typestyle) objects for style attributes, letting you write css in typescript. This enables you to abstract and organize your styles with typescript. This lets you express styles in a language (i.e. typescript) that's far more powerful than any stylesheet language, and eliminates the seam between your view funtions and styles. The last point makes it trivial to colocate your code with your styles, or provide exactly the appropriate level of coupling to maximise maintainability.
 
 ```typescript
 div ({style: {color:'green' }}, 'pickle')
