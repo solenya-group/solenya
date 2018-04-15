@@ -6,7 +6,7 @@ import { serialize, deserialize, plainToClass, classToPlain} from 'class-transfo
 
 export class App 
 {   
-    private _rootComponent: Component
+    private _rootComponent!: Component
     private lock = false
     private rootElement: Element
     private _timeTravelOn = false
@@ -77,7 +77,7 @@ export class App
         if (this.activeUpdates > 0)
             return
 
-        this.rootComponent.setParent (this, undefined, deserialize)
+        this.rootComponent.attach (this, undefined, deserialize)
       
         if (this.lock)
             return;
@@ -99,7 +99,7 @@ export class App
                 this.isVdomRendered = true
             }   
             
-            this.rootComponent.afterRefreshRecurse()
+            this.rootComponent.runRefreshes()
         })
     }
 }

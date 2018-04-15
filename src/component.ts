@@ -8,7 +8,7 @@ export abstract class Component
 {
     @Exclude() app?: App
     @Exclude() parent?: Component   
-    refresh?: () => void
+    @Exclude() private refreshQueue: Function[] = []
         
     view(): VElement {
         return div ((<any>this.constructor).name)
@@ -82,25 +82,27 @@ export abstract class Component
         return children
     }
 
-    setParent (app: App, parent?: Component, deserialize = false) {
+    attach (app: App, parent?: Component, deserialize = false) {
         const detached = this.parent == null && this.app == null
         
         this.parent = parent
         this.app = app
 
         for (var child of this.children())
-            child.setParent (app, this, deserialize)
+            child.attach (app, this, deserialize)
 
         if (detached)
-            this.attached (deserialize)
+            this.attached (deserialize)             
     }
 
-    afterRefreshRecurse() {
+    runRefreshes() {
         for (var child of this.children())
-            child.afterRefreshRecurse()
-        if (this.refresh) {
-            this.refresh()
-            this.refresh = undefined
-        }
+            child.runRefreshes()
+        while (this.refreshQueue.length)
+            this.refreshQueue.shift()!()
+    }
+
+    onRefreshed (action: () => void) {
+        this.refreshQueue.push (action)
     }
 }
