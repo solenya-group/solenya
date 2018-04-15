@@ -2,44 +2,36 @@
 
 export function combineLifecycles (a: VLifecycle, b: VLifecycle)
 {   
-    const {onadd, onbeforeupdate, onafterupdate, onremove, ondestroy} = a
+    const {onAttached, onBeforeUpdate, onUpdated, onBeforeRemove, onRemoved} = a
 
-    if (onadd || b.onadd)
-        a.onadd = (el, attrs) => {              
-            onadd && onadd(el, attrs)
-            b.onadd && b.onadd (el, attrs)
+    if (onAttached || b.onAttached)
+        a.onAttached = (el, attrs) => {                               
+            onAttached && onAttached (el, attrs)
+            b.onAttached && b.onAttached (el, attrs)
         }
 
-    if (onbeforeupdate || b.onbeforeupdate)
-        a.onbeforeupdate = (el, attrs) => {                               
-            onbeforeupdate && onbeforeupdate(el, attrs)
-            b.onbeforeupdate && b.onbeforeupdate (el, attrs)
+    if (onBeforeUpdate || b.onBeforeUpdate)
+        a.onBeforeUpdate = (el, attrs) => {                               
+            onBeforeUpdate && onBeforeUpdate(el, attrs)
+            b.onBeforeUpdate && b.onBeforeUpdate (el, attrs)
         }
 
-    if (onafterupdate || b.onafterupdate)
-        a.onafterupdate = (el, attrs) => {                               
-            onafterupdate && onafterupdate (el, attrs)
-            b.onafterupdate && b.onafterupdate (el, attrs)
+    if (onUpdated || b.onUpdated)
+        a.onUpdated = (el, attrs) => {                               
+            onUpdated && onUpdated (el, attrs)
+            b.onUpdated && b.onUpdated (el, attrs)
         }
 
-    if (onremove || b.onremove)
-        a.onremove = (el, rem) => {  
-            const doRem = () => {
-                if (b.onremove)
-                    b.onremove (el, rem)
-                else
-                    rem()  
-            }
-            if (onremove)
-                onremove (el, doRem)
-            else
-                doRem()
-        }     
+    if (onBeforeRemove || b.onBeforeRemove)
+        b.onBeforeRemove = async el => {  
+            onBeforeRemove && await onBeforeRemove (el)
+            b.onBeforeRemove && await b.onBeforeRemove (el)            
+        }  
 
-    if (ondestroy || b.ondestroy)
-        a.ondestroy = el => {                    
-            ondestroy && ondestroy (el)
-            b.ondestroy && b.ondestroy (el)
+    if (onRemoved || b.onRemoved)
+        a.onRemoved = el => {                    
+            onRemoved && onRemoved (el)
+            b.onRemoved && b.onRemoved (el)
         }    
 
     return a

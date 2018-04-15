@@ -22,7 +22,7 @@ export class App
 
         this.time = new TimeTravel<any> (state =>
             this.setRootComponent (
-                <Component><any> plainToClass(rootComponentConstructor, state, {enableCircularCheck:true}), false, false 
+                <Component><any> plainToClass(rootComponentConstructor, state, {enableCircularCheck:true}), true, false, false 
             )
         )
 
@@ -30,7 +30,7 @@ export class App
         (
             containerId,
             () => serialize (this.rootComponent),
-            serialized => this.setRootComponent (<Component> deserialize (rootComponentConstructor, serialized), false)
+            serialized => this.setRootComponent (<Component> deserialize (rootComponentConstructor, serialized), true, false)
         )
 
         this.storage.load ()
@@ -43,10 +43,10 @@ export class App
         return this._rootComponent
     }
 
-    private setRootComponent (rootComponent: Component, doSave?: boolean, doTimeSnapshot?: boolean) {
+    private setRootComponent (rootComponent: Component, deserialize = false, doSave?: boolean, doTimeSnapshot?: boolean) {
         this._rootComponent = rootComponent
         this.snapshot (doSave, doTimeSnapshot)
-        this.refresh ()
+        this.refresh (deserialize)
     }
 
     get timeTravelOn() {
@@ -61,20 +61,23 @@ export class App
 
     snapshot (doSave?: boolean, doTimeSnapshot?: boolean)
     {
-        if (this.activeUpdates == 0)
-        {
-            var json: Object
-            if (doTimeSnapshot || (this.timeTravelOn && doTimeSnapshot !== false)) {
-                json = classToPlain (this.rootComponent)
-                this.time.push (json)
-            }
-            this.storage.save (doSave, () => json != null ? serialize (json) : serialize (this.rootComponent))
+        if (this.activeUpdates > 0)
+            return
+        
+        var json: Object
+        if (doTimeSnapshot || (this.timeTravelOn && doTimeSnapshot !== false)) {
+            json = classToPlain (this.rootComponent)
+            this.time.push (json)
         }
+        this.storage.save (doSave, () => json != null ? serialize (json) : serialize (this.rootComponent))        
     }
 
-    refresh ()
+    refresh (deserialize = false)
     {
-        this.rootComponent.app = this
+        if (this.activeUpdates > 0)
+            return
+
+        this.rootComponent.setParent (this, undefined, deserialize)
       
         if (this.lock)
             return;
@@ -94,8 +97,8 @@ export class App
             else {
                 this.rootElement.appendChild (patch (rootVNode))
                 this.isVdomRendered = true
-            }               
-
+            }   
+            
             this.rootComponent.afterRefreshRecurse()
         })
     }

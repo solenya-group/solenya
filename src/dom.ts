@@ -13,12 +13,13 @@ export interface VAttributes extends VLifecycle {
     key?: string | number    
 }
 
+// pickle mod
 export interface VLifecycle {
-    onadd? (element: Element, attributes?: VAttributes) : void // pickle mod
-    onbeforeupdate? (element: Element, attributes?: VAttributes) : void // pickle mod
-    onafterupdate? (element: Element, attributes?: VAttributes) : void // pickle mod
-    onremove? (element: Element, remove: () => void) : void
-    ondestroy? (element: Element) : void
+    onAttached? (el: Element, attrs? : VAttributes) : void
+    onBeforeUpdate? (el: Element, attrs?: VAttributes) : void
+    onUpdated? (el: Element, attrs?: VAttributes) : void
+    onBeforeRemove? (el: Element) : Promise<void>
+    onRemoved? (el: Element) : void
 }
 
 // pickle mod
@@ -126,9 +127,9 @@ function createNode(vnode: VNode, callbacks: any[], isSVG: boolean) {
         var attributes = vnode.attributes 
         if (attributes) {
 
-            if (attributes.onadd) {
+            if (attributes.onAttached) {
                 callbacks.push(function () {
-                    attributes.onadd!(<Element>node, attributes) // pickle mod
+                    attributes.onAttached!(<Element>node, attributes) // pickle mod
                 })
             }
 
@@ -170,16 +171,15 @@ function updateElement(
         }
     }
     // pickle mods
-    if (! isRecycling && attributes.onbeforeupdate) {
-        attributes.onbeforeupdate(element, attributes)
+    if (! isRecycling && attributes.onBeforeUpdate) {
+        attributes.onBeforeUpdate(element, attributes)
     }
 
-    var cb = isRecycling ? attributes.onadd : attributes.onafterupdate
-    if (cb) {
-        callbacks.push(function () {
-            cb!(element, oldAttributes)
-        })            
-    }
+    // pickle mods
+    if (! isRecycling && attributes.onUpdated)
+        callbacks.push (() => attributes.onUpdated! (element, oldAttributes))  
+    else if (isRecycling && attributes.onAttached)
+        callbacks.push (() => attributes.onAttached! (element, oldAttributes))  
 }
 
 function removeChildren(element: Element, node: VNode) {
@@ -190,27 +190,24 @@ function removeChildren(element: Element, node: VNode) {
                 removeChildren(<Element>element.childNodes[i], node.children[i])
             }
 
-            if (attributes.ondestroy) {
-                attributes.ondestroy(element)
+            if (attributes.onRemoved) {
+                attributes.onRemoved(element)
             }
         }
     }
     return element
 }
 
-function removeElement(parent: Element, element: Element, velement: VElement) {
-    function done() {
-        removeChildren(element, velement)
-        parent.removeChild(element)
-    }
+// pickle mod
+async function removeElement(parent: Element, element: Element, velement: VElement)
+{    
     element["removing"] = true
 
-    var cb = velement.attributes && velement.attributes.onremove
-    if (cb) {
-        cb(element, done)
-    } else {    
-        done()
-    }
+    if (velement.attributes.onBeforeRemove)
+        await velement.attributes.onBeforeRemove (element)
+
+    removeChildren(element, velement)
+    parent.removeChild(element)
 }
 
 function activeNodes (nodes: NodeList) {

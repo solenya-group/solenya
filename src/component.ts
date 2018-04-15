@@ -6,25 +6,24 @@ import { Exclude, classToPlain } from 'class-transformer'
 
 export abstract class Component
 {
-    @Exclude() private _app?: App
-    @Exclude() private _parent?: Component    
+    @Exclude() app?: App
+    @Exclude() parent?: Component   
+    refresh?: () => void
         
     view(): VElement {
         return div ((<any>this.constructor).name)
     }
 
-    beforeUpdate (payload?: any) { return true }
+    beforeUpdate (payload: any) { return true }
 
-    afterUpdate (payload?: any) { }
+    updated (payload: any) { }
 
     update(updater: () => void, payload: any = {})
-    {
-        const app = this.root().app
+    {       
         payload.source = this
-        
         try {
-            if (app)
-                app.activeUpdates++
+            if (this.app)
+                this.app.activeUpdates++
 
             for (var c of this.branch())
                 if (c.beforeUpdate (payload) === false)
@@ -33,18 +32,20 @@ export abstract class Component
             updater()
 
             for (var c of this.branch())
-                c.afterUpdate (payload)
+                c.updated (payload)
         }
         finally {
-            if (app)
-                app.activeUpdates--
+            if (this.app)
+                this.app.activeUpdates--
         }
 
-        if (app) {
-           app.snapshot ()
-           app.refresh ()
+        if (this.app) {
+           this.app.snapshot ()
+           this.app.refresh ()
         }
     }
+
+    attached (deserialized: boolean) {}
 
     root() : Component {
         return ! this.parent ? this : this.parent.root()
@@ -81,29 +82,25 @@ export abstract class Component
         return children
     }
 
-    get app() : App | undefined { return this._app }
+    setParent (app: App, parent?: Component, deserialize = false) {
+        const detached = this.parent == null && this.app == null
+        
+        this.parent = parent
+        this.app = app
 
-    set app (app: App | undefined) {
-        this._app = app
-        this.parent = undefined      
-    }
-
-    get parent(): Component | undefined { return this._parent }
-
-    set parent (parent: Component | undefined) {
-        this._parent = parent
         for (var child of this.children())
-            child.parent = this
-        this.beforeRefresh()
+            child.setParent (app, this, deserialize)
+
+        if (detached)
+            this.attached (deserialize)
     }
 
     afterRefreshRecurse() {
         for (var child of this.children())
             child.afterRefreshRecurse()
-        this.afterRefresh()
+        if (this.refresh) {
+            this.refresh()
+            this.refresh = undefined
+        }
     }
-
-    beforeRefresh() { }
-
-    afterRefresh() { }
 }

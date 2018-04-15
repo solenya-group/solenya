@@ -1,8 +1,32 @@
+# Why Pickle?
+
+Pickle is the web framework for you if you like:
+
+**No config. No html tags. No css files. Just code.**.
+
+Make that **statically typed code**. I.e. **typescript**.
+
+Views use the **functional paradigm**. Views are just functions that return **virtual dom** elements.
+
+Components represent **application state**. They use the **OO paradigm** because the single source of truth should be **tightly coupled** to actions that manage that truth.
+
+**Application state is serializable**. That gives you time travel debugging, hot module reloading, transactions, undo/redo etc.
+
+**Typestyle** integrated by default. Because **programming** is cool.
+
+**Composable**.
+
+**Dry**.
+
+To be more specific:
+
+I think the functional approach should be used for the parts of your application where you can eliminate state, and the OO approach where you need to manage state. Eschewing OO for managing state necessitates concepts like functional lensing, reducers, and higher-order-components, that turn walking into gymnastics. And frequently boilerplate. Conversely, using stateful components to model reusable views polutes that which can be achieved with a pure functional approach. There wasn't a framework where state management and view generation were treated with these distinct but complementary approaches.
+
+In addition, I also found that few of the APIs were written with a static typing mindset. The typescript definitions were an afterthought, meaning that if you want to use static typing, the experience was obviously compromised. In addition, programmers, who are in the business of abstraction, seem strangely infected with "literalus" - the need to *literally* see HTML tags and *literally* work with css. You can elegantly and uniformally express both of those in typescript. Occam's razor demands it.
+
 # Installation
 
 `npm install pickle-ts`
-
-The library is new, small, and easy to modify, so consider copying the source files to your own project, and then modifying it to suit your own needs.
 
 # Samples
 
@@ -18,7 +42,6 @@ The library is new, small, and easy to modify, so consider copying the source fi
 - [Composition](#composition)
   * [How it Works](#how-it-works)
   * [The @Type Decorator](#the-type-decorator)
-- [Forms](#forms)
 - [Updates](#updates)
   * [Advanced Updates](#advanced-updates)
 - [Views](#views)
@@ -30,8 +53,10 @@ The library is new, small, and easy to modify, so consider copying the source fi
 - [Serialization](#serialization)
   * [Circular references](#circular-references)
   * [Keep your component state small](#keep-your-component-state-small)
+  * [NaNs](#nans)
 - [Hot Module Reloading](#hot-module-reloading)
 - [Async](#async)
+- [Forms](#forms)
 - ['this' Rules](#-this--rules)
 - [HTML Helpers](#html-helpers)
 - [Style](#style)
@@ -42,16 +67,6 @@ The library is new, small, and easy to modify, so consider copying the source fi
   * [Validation](#validation)
 
 # Intro to Pickle
-
-Pickle is a small library for writing client-side web apps. Core features:
-
-* *Stateful* components with *stateless* views
-* Serializable, composable, inheritable components
-* Unified approach to time travel debugging, hot module reloading, transactions, undo/redo
-* Virtual DOM (forked from Ultradom)
-* Typescript orientation
-* Typestyle integrated
-* DRY as possible
 
 Let's start with a counter component:
 
@@ -136,46 +151,11 @@ After the root component is created, it's attached to the `App` object. Once att
 
 The `@Type` decorator from the `class-transformer` library enables your component classes to be deserialized from plain json objects. It's necessary as **Typescript transpiles away property types** (unlike in C# or Java).
 
-# Forms
-
-To make writing forms easier, pickle provides some widget functions for common inputs, and provides an `updateProperty` callback for updating properties in the `Component`. In this example, we write a BMI component with two sliders:
-
-```typescript
-export class BMI extends Component
-{
-    height = 180
-    weight = 80
-
-    calc () {
-        return this.weight / (this.height * this.height / 10000)
-    }
-
-    view () {       
-        return div (             
-            div (
-                "height",
-                slider (() => this.height, 100, 250, 1, e => this.updateProperty (e)),
-                this.height
-            ),
-            div (
-                "weight",
-                slider (() => this.weight, 30, 150, 1, e => this.updateProperty (e)),
-                this.weight
-            ),
-            div ("bmi: " + this.calc())
-        )
-    }
-}
-```
-[[Open Sample in Code Sandbox](https://codesandbox.io/s/9j75lwlzkp)]
-
-The `updateProperty` callback takes a `KeyValue` argument, which has a key and value that map to the Component property name and new value. `updateProperty` calls through to the component's `update` for you, which is explained in the next section.
-
-**Always initialise component fields explicitly, and for numbers use NaN rather than undefined**. This is because **Typescript transpiles away property types**, meaning that at runtime pickle can't know whether it's dealing with a string or number, and assumes an undefined value is a string by default, in the absence of a runtime value.
-
 # Updates
 
-All state transitions must occur in a constructor, or via an update:
+All state transitions must occur within an update, app startup, or app deserialization. 
+
+An update is straightforward:
 
 ```typescript
     add (x: number) {
@@ -184,56 +164,42 @@ All state transitions must occur in a constructor, or via an update:
 ```
 You pass `update` a void function that performs a state transition.
 
-A component usually updates its state by directly handling callbacks. We did that in the previous section, with our BMI component updating its state in response to a slider callback with component's `updateProperty` handler. A common pattern is to provide a custom callback in order to perform an additional state change after a property update:
-
-```typescript
-    handleSomePropertyChange (payload: KeyValue) {
-        this.update(() => {
-            this.updateProperty (payload)
-            // perform some additional state change
-        })
-    }
-```
 At the end of an update, the root component's `view` method is called. Updates are synchronous, but views are refreshed asynchronously.
 
 Nested updates are regarded as a single update. The view will at most be called once for an update.
 
 ## Advanced Updates
 
-Occasionally it's useful to generically handle any update to a component, including all its descendents. That can be done by overriding the `beforeUpdate` and `afterUpdate` methods.
+All state changes to `Component` trigger its `updated` method:
 
-Override `beforeUpdate` to prepare for or cancel any update (by returning `false`):
+```typescript
+   updated (payload: any) {
+      ...
+   }
+```
+You can also override `beforeUpdate` to prepare for or cancel any update (by returning `false`):
 
 ```typescript 
-   beforeUpdate (payload?: any) {
+   beforeUpdate (payload: any) {
        // return true to go ahead with update
        // return false to cancel update
    }
 ```
+Both `beforeUpdate` and `updated` are called on an update, from child through the root. This allows a parent to control and respond to updates made by its children, without having to handle specific callbacks.
 
-Override `afterUpdate` to respond to any update, performing any final state modifications before the view is redrawn:
+The `payload` property contains any data associated with the update. The `source` property will be set to component that `update` was called on, that's occasionally useful.
+
+In addition, when your app is created or deserialized, `attached` will be called on every component, with a depth-first traversal.
 
 ```typescript
-   afterUpdate (payload?: any) {
-      ...
+   attached (deserialised: boolean) {
+       ...
    }
 ```
 
-Both `beforeUpdate` and `afterUpdate` are called on an update, from child through the root. This allows a parent to control and respond to updates made by its children, without having to handle specific callbacks.
-
-Here's the signature of the `update` API:
-
-```typescript
-update(updater: () => void, payload: any = {})
-```
-
-`payload` is an optional argument that describes the update. `payload` is typed `any` for convenience, but `update` will set its `source` property to `this`, since its occassionally useful for `beforeUpdate` and `afterUpdate` to know which component initiated the update.
-
-Component's `updateProperty` method, when calling through to `update`, supplies a payload with a `key` and `value`, which correspond to the component property name and value.
-
 # Views
 
-Views are pure functions of state. Pickle uses a virtual DOM (Ultradom) to efficiently update the actual DOM.
+Views are pure functions of state. Pickle uses a virtual DOM (forked from Ultradom) to efficiently update the actual DOM.
 
 You can add as may optional parameters as you want to your child component `View` methods. This makes it easy for parents to customize their children without their children needing extra state:
 
@@ -249,6 +215,13 @@ You can add as may optional parameters as you want to your child component `View
 
 To write a reusable view, your first approach should be to merely write a function that returns a `VElement`. However, if your view function ends up requiring callbacks to write state back to a component, then you should probably rewrite that view as a component itself, to better encapsulate that state logic.
 
+You may also set the `Component`'s `refresh` method, that will be called after the view is refreshed (and then subsequently set back to `undefined`). This lets you perform side effects.
+
+```typescript
+   refresh: () => void
+```
+You may however, need deeper control side-effecting the DOM.
+
 ## Lifecycle Events
 
 For the most part, views are pure functions of state. However, DOM elements can have additional state, such as inputs that have focus and selections. Furthermore, animations, at a low level, need to interact with the DOM bypassing the virtual DOM. This is for both performance reasons (as you don't want to invoke the GC), as well as keeping your application state logic separated from your animation state. For example, if you delete an item from a list, it's a simplifying assumption for your application state to consider that item gone, but you'll want that item to live a little longer in the real DOM to gracefully exit.
@@ -258,37 +231,37 @@ To interact with the DOM directly, you provide lifecycle callbacks on your virtu
 ```
 export interface VLifecycle
 {
-    onadd? (element: Element, attributes?: VAttributes) : void
-    onbeforeupdate? (element: Element, attributes?: VAttributes) : void
-    onafterupdate? (element: Element, attributes?: VAttributes) : void    
-    onremove? (element: Element, remove: () => void) : void
-    ondestroy? (element: Element) : void
+    onAttached? (el: Element, attrs: VAttributes) : void
+    onBeforeUpdate? (el: Element, attrs: VAttributes) : void
+    onUpdated? (el: Element, attrs: VAttributes) : void    
+    onBeforeRemove? (el: Element) : Promise<void>
+    onRemoved? (el: Element) : void
 }
 ```
-`onadd` is called after the element is added to the DOM, and `onremove` before it's removed from the DOM.
+`onAttached` is called when an element is attached to the DOM.
 
-`onremove` itself takes a callback, enabling remove to operate asynchronously. When that operation is completed, the `remove` callback should be called, which will then invoke the `ondestroy` callback.
+`onUpdate` is called whenever an element is updated. Use it to perform any final updates to the DOM. The `onBeforeUpdate` lets you take any preliminary actions before the element changes.
 
-The `onbeforeupdate` and `onafterupdate` callbacks occur before and after a DOM node is updated.
+`onRemoved` is called when an element is removed from the DOM.`onBeforeRemove` allows you take any preliminary actions - which may be asynchronous - before an element is removed. 
 
 Here's how you might plug in some focusing logic when an element is added to the DOM:
 
 ```typescript
  div ({
-     onadd: (el: Element, attrs: VAttributes) => handleFocus (el...)
+     onAttached: (el, attrs) => handleFocus (el...)
     ...
 ```
-When the patcher adds an element to the DOM corresponding to your virutal div element, it invokes the `onadd` callback.
+When the patcher adds an element to the DOM corresponding to your virtual div element, it invokes the `onAttached` callback.
 
-Lifecycle callbacks automatically compose. So both `onadd` functions will be called here, in the order of appearance:
+Lifecycle callbacks automatically compose. So both `onAttached` functions will be called here, in the order of appearance:
 
 ```typescript
  div (
     {
-        onadd: (el: Element, attrs: VAttributes) => handleFocus (el...)
+        onAttached: (el, attrs) => handleFocus (el...)
     },
     {
-        onadd: (el: Element, attrs: VAttributes) => handleSelection (el...)
+        onAttached: (el, attrs) => handleSelection (el...)
     }
     ...
  }
@@ -328,11 +301,14 @@ We can implement `slideChildren` using the [FLIP](https://aerotwist.com/blog/fli
 export function slideChildren () : VLifecycle
 {
     return {                       
-        onbeforeupdate (el: Element) {                
+        onBeforeUpdate (el) {                
             let els = el["state_slideChildren"] = Array.from(el.childNodes).map(c => (c as HTMLElement))
             els.forEach (c => measure(c))
         },
-        onafterupdate (el: Element) {
+        onUpdated (el, attrs, create) {
+            if (create)
+               return
+
             let els = el["state_slideChildren"] as HTMLElement[]
             els.forEach (c => flip (c))
         }                    
@@ -427,7 +403,7 @@ There's a couple of points to be aware of:
 
 Avoid circular references unless you absolutely need them. Firstly, the serializer doesn't handle them, and secondly, it increases your cyclomatic complexity which is why some languages like F# deliberately force you to minimize them. However, occassionaly you'll need them. To do so:
 
-* override component's `beforeRefresh` method and set the circular references there
+* override component's `onUpdate` method and set the circular references there
 * exclude the circular references from being serialized with the `@Exclude()` decorator
 
 ## Keep your component state small
@@ -435,6 +411,15 @@ Avoid circular references unless you absolutely need them. Firstly, the serializ
 As a general rule, don't gratuitously use component state, and instead try to use pure functions where you can. In particular, avoid storing UI styles in component state - instead pass styles from a parent view down to child views. If you must store a UI style in a component, you'll probably want to decorate it with `@Exclude` to avoid serialization.
 
 Serialization, deserialization, and local storage are surpisingly fast. However, efficiency is still important. Avoid properties with large immutable objects, and instead indirectly reference them with a key. For example, instead of directly storing a localisation table of French data on your component, you'd merely store the string "fr", and return the localisation table based on that key. Minimize the state on your components to that which you need to respond to user actions; keep it as close to a state machine as possible.
+
+## NaNs
+
+Unfortunately, for now `class-transformer` converts `NaN` to `null` values. On deserialization, convert them back. This is a small outstanding issue.
+```
+attached (deserialised: boolean) {
+    this.foo = this == null ? NaN : foo
+}
+```
 
 # Hot Module Reloading
 
@@ -459,6 +444,43 @@ Pickle's update path is synchronous, so you perform aynchronous activites outsid
 Notice that the `update` occurs *after* the asynchronous operation has completed.
 
 Note that the samples demonstrate calling github's search, with debouncing.
+
+# Forms
+
+To make writing forms easier, pickle provides some widget functions for common inputs, and provides an `updateProperty` callback for updating properties in the `Component`. In this example, we write a BMI component with two sliders:
+
+```typescript
+export class BMI extends Component
+{
+    height = 180
+    weight = 80
+
+    calc () {
+        return this.weight / (this.height * this.height / 10000)
+    }
+
+    view () {       
+        return div (             
+            div (
+                "height",
+                slider (() => this.height, 100, 250, 1, e => this.updateProperty (e)),
+                this.height
+            ),
+            div (
+                "weight",
+                slider (() => this.weight, 30, 150, 1, e => this.updateProperty (e)),
+                this.weight
+            ),
+            div ("bmi: " + this.calc())
+        )
+    }
+}
+```
+[[Open Sample in Code Sandbox](https://codesandbox.io/s/9j75lwlzkp)]
+
+The `updateProperty` callback takes a `KeyValue` argument, which has a key and value that map to the Component property name and new value. `updateProperty` calls through to the component's `update` for you.
+
+**Always initialise component fields explicitly, and for numbers use NaN rather than undefined**. This is because **Typescript transpiles away property types**, meaning that at runtime pickle can't know whether it's dealing with a string or number, and assumes an undefined value is a string by default, in the absence of a runtime value.
 
 # 'this' Rules
 
@@ -488,9 +510,7 @@ Use ordinary class methods, not function members when calling update. Otherwise 
 ```
 # HTML Helpers
 
-The HTML helpers take a spread of attribute objects, elements, and primitive values. Pickle has been designed to work well with Typescript, so your IDE can provide statement completion:
-
-![pickle flow diagram](pickle-intellisense.png "Pickle Flow Diagram")
+The HTML helpers take a spread of attribute objects, elements, and primitive values. Pickle has been designed to work well with Typescript, so your IDE can provide statement completion. In conjunction with `typestyle`, as we'll see later, we get a deep, clean static typing experience.
 
 Attribute objects go first. Some examples:
 
@@ -498,7 +518,7 @@ Attribute objects go first. Some examples:
 div ()                                  // empty
 div ("hello")                           // primitive value
 div ({id: 1})                           // attribute
-div ({id: 1, class: "foo"})                   // multiple attributes
+div ({id: 1, class: "foo"})             // multiple attributes
 div ({id: 1}, "hello")                  // attribute followed by element
 div (div ())                            // nested elements
 div ({id: 1}, "hello", div("goodbye"))  // combination
@@ -646,4 +666,4 @@ The sample app demonstrates integrating history to provide routing. At its heart
 ## Validation
 https://github.com/typestack/class-validator
 
-You'll want to sprinkle your component's properties with validate decorators, and then override the `afterUpdate` method to call `validate`.
+You'll want to sprinkle your component's properties with validate decorators.
