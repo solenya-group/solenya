@@ -215,7 +215,7 @@ You can add as may optional parameters as you want to your child component `View
 
 To write a reusable view, your first approach should be to merely write a function that returns a `VElement`. However, if your view function ends up requiring callbacks to write state back to a component, then you should probably rewrite that view as a component itself, to better encapsulate that state logic.
 
-You may also call `Component.onRefreshed' to queue a callback to perform DOM side effects after the next refresh. You typically do so in the `view` method:
+You may also call `Component.onRefreshed` to queue a callback to perform DOM side effects after the next refresh. You typically do so in the `view` method:
 
 ```typescript
    view() {
