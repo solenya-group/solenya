@@ -308,7 +308,7 @@ export function slideChildren () : VLifecycle
             let els = el["state_slideChildren"] = Array.from(el.childNodes).map(c => (c as HTMLElement))
             els.forEach (c => measure(c))
         },
-        onUpdated (el, attrs, create) {
+        onUpdated (el) {
             if (create)
                return
 
@@ -320,7 +320,7 @@ export function slideChildren () : VLifecycle
 ```
 [[Open Sample in Code Sandbox](https://codesandbox.io/s/yk42wxnvyz)]
 
-By design, these lifecycle events are not present on pickle components. Pickle components manage application state, only affecting DOM state via the virtual DOM. This lets you separate the very different lifecycles of application state and DOM state, making your code easier to maintain.
+By design, these lifecycle events are not present on pickle components. Pickle components manage application state, only affecting DOM state via its `view` method, and the intentionally ungranular `refresh` callback. This lets you separate the very different lifecycles of application state and DOM state, making your code easier to maintain.
 
 While there's always pragmatic exceptions, the principles of pickle state are:
 
