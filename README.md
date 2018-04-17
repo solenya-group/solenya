@@ -31,7 +31,7 @@ In addition, I also found that few of the APIs were written with a static typing
 # Samples
 
 * Github: https://github.com/pickle-ts/pickle-samples
-* Code Sandbox: https://codesandbox.io/u/pickle-ts
+* Live Editable Code Samples: https://stackblitz.com/@pickle-ts
 
 # Table of Contents
 
@@ -88,7 +88,7 @@ export class Counter extends Component
     }
 }
 ```
-[[Open Sample in Code Sandbox](https://codesandbox.io/s/o5n8mr1j8y)]
+[Play](https://stackblitz.com/edit/pickle-counter)
 
 In pickle, application state lives in your components — in this case `count`.
 
@@ -126,7 +126,7 @@ export class TwinCounters extends Component
     }
 }
 ```
-[[Open Sample in Code Sandbox](https://codesandbox.io/s/641qqzzy3w)]
+[Play](https://stackblitz.com/edit/pickle-composition)
 
 Components must have parameterless constructors, though they may include *optional* arguments. This small design restriction enables `class-transformer`'s deserializer to work.
 
@@ -141,7 +141,7 @@ export class Tree extends Component
     ...
 }
 ```
-[[Open Sample in Code Sandbox](https://codesandbox.io/s/2335v07yq0)]
+[Play](https://stackblitz.com/edit/pickle-tree)
 
 ## How it Works
 
@@ -318,7 +318,7 @@ export function slideChildren () : VLifecycle
     } 
 }
 ```
-[[Open Sample in Code Sandbox](https://codesandbox.io/s/yk42wxnvyz)]
+[Play](https://stackblitz.com/edit/pickle-animating-a-list)
 
 By design, these lifecycle events are not present on pickle components. Pickle components manage application state, only affecting DOM state via its `view` method, and the intentionally ungranular `onRefreshed` method. This lets you separate the very different lifecycles of application state and DOM state, making your code easier to maintain.
 
@@ -479,7 +479,7 @@ export class BMI extends Component
     }
 }
 ```
-[[Open Sample in Code Sandbox](https://codesandbox.io/s/9j75lwlzkp)]
+[Play](https://stackblitz.com/edit/pickle-bmi)
 
 The `updateProperty` callback takes a `KeyValue` argument, which has a key and value that map to the Component property name and new value. `updateProperty` calls through to the component's `update` for you.
 
@@ -620,12 +620,12 @@ export class Todos extends Component
     }
 }
 ```
-[[Open Sample in Code Sandbox](https://codesandbox.io/s/6l3q7w65qz)]
+[Play](https://stackblitz.com/edit/pickle-task-list)
 
 Notes:
 * Keep things simple! Only write components if they need to manage their own state. In this case, we didn't need a sub component for an individual task.
 * In a real application, we'd probably have a unique key associated with each todo item, rather than identifying the todo item by name.
-* Try passing in `{style: {color:red}}` as an additional argument to `commandButton` to customize the css.
+* Try passing in `{style: { color:'green' } }` as an additional argument to `commandButton` to customize the css.
 
 # Beyond Immutability
 
