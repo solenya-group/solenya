@@ -24,6 +24,19 @@ I think the functional approach should be used for the parts of your application
 
 In addition, I also found that few of the APIs were written with a static typing mindset. The typescript definitions were an afterthought, meaning that if you want to use static typing, the experience was obviously compromised. In addition, programmers, who are in the business of abstraction, seem strangely infected with "literalus" - the need to *literally* see HTML tags and *literally* work with css. You can elegantly and uniformally express both of those in typescript. Occam's razor demands it.
 
+Finally, pickle is small: see and understand the source code for yourself. Its power comes from its simplicity, and its intended use with many other great libraries:
+
+ * A virtual DOM based on Ultradom (forked)	
+ * typestyle (dependency)
+ * typescript & reflect-metadata for reflection (dependency)
+ * class-tranformer for serialization (dependency)
+ * class-validator for validation
+ * any animation API using vdom hooks (as in samples)
+ * mjackson/history for managing HTML history 
+ * any css framework like bootstrap
+ * webpack for hot reloading
+ * lodash for great utility functions like debouncing used in the samples
+
 # Installation
 
 `npm install pickle-ts`
@@ -62,6 +75,15 @@ In addition, I also found that few of the APIs were written with a static typing
 - [Style](#style)
 - [Task List App](#task-list-app)
 - [Beyond Immutability](#beyond-immutability)
+- [API Reference](#api-reference)
+  * [Component Class API](#component-class-api)
+    * [Component View Members](#component-view-members)
+    * [Component Initialization Members](#component-initialization-members)
+    * [Component Update Members](#component-update-members)
+    * [Component Tree Members](#component-tree-members)
+  * [App Class API](#app-class-api)
+    * [App Initialization Members](#app-initialization-members)
+    * [App Serialization Members](#app-serialization-members)
 - [Use With...](#use-with)
   * [HTML History](#html-history)
   * [Validation](#validation)
@@ -656,6 +678,102 @@ var newRoot =
 ``` 
 
 The other benefit of the transactional memory approach, is we can also have asynchronous methods that optimistically update `this` when continuing. Note that when we time travel, our `this` in that scenario is of course lost.
+
+# API Reference
+
+The `Component` and `App` APIs have been covered in earlier sections, and can also be understood through intellisense and the source code, but are included here to give a reference-oriented overview.
+
+The HTML, lifecycle, serialization, and time travel APIs have already been covered in their dedicated sections.
+
+## Component Class API
+
+### Component View Members
+
+```typescript
+/** Override to return a virtual DOM element that visually represents the component's state */
+view(): VElement
+
+/** Call to run an action after the view is rendered. Think of it like setTimeout but executed at exactly at the right time in the update cycle. */
+onRefreshed (action: () => void) 
+```
+
+### Component Initialization Members
+
+```typescript
+/** Called after construction, with a flag indicating if deserialization occured */
+attached (deserialized: boolean) 
+```
+### Component Update Members
+
+```typescript
+/** Call with action that updates the component's state, with optional payload */
+update (updater: () => void, payload: any = {}) 
+
+/** Override to capture an update before it occurs, returning `false` to cancel the update
+* @param payload Contains data associated with update - the update method will set the source property to 'this'
+*/
+beforeUpdate (payload: any) : boolean
+
+/** Override to listen to an update after its occured
+* @param payload Contains data associated with update - the update method will set the source property to 'this'
+*/
+updated (payload: any) : void
+
+/** A convenient shortcut to update a component property; wraps property change in update */
+updateProperty (payload: KeyValue)
+```
+
+### Component Tree Members
+
+```typescript
+/** The app associated with the component; undefined if not yet attached - use judiciously - main purpose is internal use by update method */
+app?: App
+
+/** The parent component; undefined if the root component - use judiciously - main purpose is internal use by update method */
+parent?: Component  
+
+/** Returns the root component by recursively walking through each parent */
+root () : Component 
+
+/** Returns the branch, inclusively from this component to the root component */
+branch () : Component[]
+
+/** Returns the properties that are components, flattening out array properties of components */
+children () : Component[]      
+```
+## App Class API
+
+### App Initialization Members
+```typescript
+/**    
+ * The entry point for a pickle app
+ * @param rootComponentConstructor The parameterless constructor of the root component
+ * @param containerId The element id to render the view, and local storage name
+ */
+constructor (rootComponentConstructor: new () => Component, containerId: string)
+
+/** Root component of updates, view and serialization */
+rootComponent: Component 
+```
+
+### App Serialization Members
+```typescript
+/** Manages serialization of root component to local storage */
+storage: Storage 
+
+/** manages time travel - type is 'any' because component snapshots are converted to plain json objects */
+time: TimeTravel<any> 
+
+/** whether snapshots occur by default after each update */
+timeTravelOn: boolean 
+
+/**
+ * Serialize the root component to local storage and/or time travel history
+ * @param doSave true = force save, false = do not save, undefined = use value of App.storage.autosave
+ * @param doTimeSnapshot true = force snapshot,false = do not snapshot, undefined = use value of App.timeTravelOn
+ */
+snapshot(doSave?: boolean, doTimeSnapshot?: boolean): void
+```
 
 # Use With...
 
