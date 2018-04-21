@@ -43,7 +43,7 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
 
 # Samples
 
-* Live Demos: http://pickle-env.adyymdcdmv.eu-west-2.elasticbeanstalk.com/
+* Live Demos: http://pickle-ts.com/
 * Live Editable Code Samples: https://stackblitz.com/@pickle-ts
 * Github Samples: https://github.com/pickle-ts/pickle-samples
 
