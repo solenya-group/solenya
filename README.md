@@ -628,7 +628,7 @@ export class Todos extends Component
 
     view () {
         return div (
-            inputer (() => this.title, e => this.updateProperty (e)),
+            inputText (() => this.title, e => this.updateProperty (e)),
             ! this.title ? undefined : commandButton (() => this.add(), 'Add'),
             ul (
                 this.list.map (task =>
@@ -642,12 +642,9 @@ export class Todos extends Component
     }
 }
 ```
-[Play](https://stackblitz.com/edit/pickle-task-list)
+Conceptually, that's all there is to it. However, a more complete example is here: [Play](https://stackblitz.com/edit/pickle-task-list)
 
-Notes:
-* Keep things simple! Only write components if they need to manage their own state. In this case, we didn't need a sub component for an individual task.
-* In a real application, we'd probably have a unique key associated with each todo item, rather than identifying the todo item by name.
-* Try passing in `{style: { color:'green' } }` as an additional argument to `commandButton` to customize the css.
+Keep things simple! Only write components if they need to manage their own state. In this case, we didn't need a sub component for an individual task.
 
 # Beyond Immutability
 
