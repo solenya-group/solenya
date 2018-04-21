@@ -610,13 +610,13 @@ It's common for client-side web frameworks to demonstrate how they'd write a tas
 ```typescript
 export class Todos extends Component
 {    
-    title: string
+    currentText: string
     list: string[] = []
 
     add () {
         this.update(() => {            
-            this.list = this.list.concat (this.title!)
-            this.title = undefined
+            this.list = this.list.concat (this.currentText!)
+            this.currentText = undefined
         })
     }
 
@@ -628,8 +628,8 @@ export class Todos extends Component
 
     view () {
         return div (
-            inputText (() => this.title, e => this.updateProperty (e)),
-            ! this.title ? undefined : commandButton (() => this.add(), 'Add'),
+            inputText (() => this.currentText, e => this.updateProperty (e)),
+            ! this.currentText ? undefined : commandButton (() => this.add(), 'Add'),
             ul (
                 this.list.map (task =>
                     li (
@@ -642,7 +642,7 @@ export class Todos extends Component
     }
 }
 ```
-Conceptually, that's all there is to it. However, a more complete example is here: [Play](https://stackblitz.com/edit/pickle-task-list)
+That's the essence of it. However, a more complete example is here: [Play](https://stackblitz.com/edit/pickle-task-list)
 
 Keep things simple! Only write components if they need to manage their own state. In this case, we didn't need a sub component for an individual task.
 
