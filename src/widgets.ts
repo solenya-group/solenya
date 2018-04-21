@@ -1,8 +1,8 @@
 import { VElement, VAttributes } from './dom'
-import { button, input, select, option, div, label, span, br, a } from './html'
+import { HValue, button, input, select, option, div, label, span, br, a } from './html'
 import { KeyValue, key, PropertyName, propertyName, Let, fuzzyEquals } from './util'
 
-export function commandButton(click: () => void, ...values: any[]) { 
+export function commandButton(click: () => void, ...values: HValue[]) { 
     return button (
         {
             onclick: (e: Event) => click()
@@ -11,7 +11,7 @@ export function commandButton(click: () => void, ...values: any[]) {
     )
 }
 
-export function commandLink(click: () => void, ...values: any[]) {
+export function commandLink(click: () => void, ...values: HValue[]) {
     return a (
         {
             onclick: (e: Event) => click(),
@@ -21,7 +21,7 @@ export function commandLink(click: () => void, ...values: any[]) {
     )
  }
 
-export function inputer(propertyAccess: () => any, inputAction: (propertyChange: KeyValue) => any, ...values: any[])
+export function inputText (propertyAccess: () => any, inputAction: (propertyChange: KeyValue) => any, ...values: HValue[])
 {
     var handler = handlePropertyChange (propertyAccess, inputAction)
     return input(
@@ -42,7 +42,7 @@ export function handlePropertyChange (propertyAccess: () => any, action: (proper
     })
 }
 
-export function slider (propertyAccess: () => any, min: number, max: number, step: number, slideAction: (propertyChange: KeyValue) => any, ...values: any[])
+export function slider (propertyAccess: () => any, min: number, max: number, step: number, slideAction: (propertyChange: KeyValue) => any, ...values: HValue[])
 {
     var handler = handlePropertyChange (propertyAccess, slideAction)
     return input (
@@ -66,7 +66,7 @@ export function selector
     options: string[][] = [],
     hasEmpty: boolean = false,
     selectAction: (propertyChange: KeyValue) => any,
-    ...values: any[]
+    ...values: HValue[]
 )
 {
     const value = propertyAccess()
@@ -113,22 +113,20 @@ export function radioGroup
     checkedAction: (propertyChange: KeyValue) => any
 )
 {
-    return div (
-        options.map (pair =>
-            label (
-                input({
-                    value: pair[0],
-                    name: key (propertyAccess),
-                    type: "radio",
-                    checked: fuzzyEquals(pair[0], propertyAccess()) ? "checked" : undefined,
-                    onchange: handlePropertyChange (propertyAccess, checkedAction),
-                    onUpdated: (element: HTMLInputElement, attributes?: VAttributes) => {
-                        element.checked = element.getAttribute ("checked") == "checked"
-                    }
-                }),
-                pair[1],
-                br()
-            )
+    return options.map (pair =>
+        label (
+            input({
+                value: pair[0],
+                name: key (propertyAccess),
+                type: "radio",
+                checked: fuzzyEquals(pair[0], propertyAccess()) ? "checked" : undefined,
+                onchange: handlePropertyChange (propertyAccess, checkedAction),
+                onUpdated: (element: HTMLInputElement, attributes?: VAttributes) => {
+                    element.checked = element.getAttribute ("checked") == "checked"
+                }
+            }),
+            pair[1],
+            br()
         )
     )
  }

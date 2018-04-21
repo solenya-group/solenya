@@ -11,13 +11,23 @@ export class App
     private rootElement: Element
     private _timeTravelOn = false
     private isVdomRendered = false
-    
-    storage: Storage    
+
+    /** Manages serialization of root component to local storage */    
+    storage: Storage
+
+    /** Manages time travel - type is 'any' because component snapshots are converted to plain json objects */
     time: TimeTravel<any>        
+
+    /** internal use only - update tally to avoid unnecessary refereshes for nested updates */
     activeUpdates = 0
 
+    /**    
+     * The entry point for a pickle app
+     * @param rootComponentConstructor The parameterless constructor of the root component
+     * @param containerId The element id to render the view, and local storage name
+     */
     constructor (rootComponentConstructor : new() => Component, containerId: string)
-    {
+    {               
         this.rootElement = document.getElementById (containerId)!        
 
         this.time = new TimeTravel<any> (state =>
@@ -39,6 +49,7 @@ export class App
             this.setRootComponent (new rootComponentConstructor())
     }
 
+    /** Root component of updates, view and serialization */
     get rootComponent() {
         return this._rootComponent
     }
@@ -49,6 +60,7 @@ export class App
         this.refresh (deserialize)
     }
 
+    /** Whether snapshots occur by default after each update  */
     get timeTravelOn() {
         return this._timeTravelOn
     }
@@ -59,6 +71,11 @@ export class App
             this.snapshot (false, true)        
     }
 
+    /**
+     * Serialize the root component to local storage and/or time travel history
+     * @param doSave true = force save, false = do not save, undefined = use value of App.storage.autosave
+     * @param doTimeSnapshot true = force snapshot,false = do not snapshot, undefined = use value of App.timeTravelOn
+     */
     snapshot (doSave?: boolean, doTimeSnapshot?: boolean)
     {
         if (this.activeUpdates > 0)
@@ -72,6 +89,7 @@ export class App
         this.storage.save (doSave, () => json != null ? serialize (json) : serialize (this.rootComponent))        
     }
 
+    /** internal use only */
     refresh (deserialize = false)
     {
         if (this.activeUpdates > 0)

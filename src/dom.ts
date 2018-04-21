@@ -199,14 +199,17 @@ function removeChildren(element: Element, node: VNode) {
 }
 
 // pickle mod
-async function removeElement(parent: Element, element: Element, velement: VElement)
-{    
-    element["removing"] = true
+async function removeNode(parent: Element, element: Node, vnode: VNode)
+{   
+    if (isVElement (vnode)) {
+        element["removing"] = true
 
-    if (velement.attributes.onBeforeRemove)
-        await velement.attributes.onBeforeRemove (element)
+        if (vnode.attributes.onBeforeRemove)
+            await vnode.attributes.onBeforeRemove (<Element>element)
 
-    removeChildren(element, velement)
+        removeChildren(<Element>element, vnode)
+    }
+
     parent.removeChild(element)
 }
 
@@ -233,7 +236,7 @@ function patchElement(
         if (parent) {
             parent.insertBefore(newElement, node || null) // pickle mod
             if (oldVNode != null) {
-                removeElement(parent, <Element>node, <VElement> oldVNode) // pickle mod
+                removeNode(parent, <Element>node, <VElement> oldVNode) // pickle mod
             }
         }
         node = newElement
@@ -334,14 +337,14 @@ function patchElement(
 
         while (i < oldChildren.length) {
             if (getKey(oldChildren[i]) == null) {
-                removeElement(<Element>node, <Element>oldElements[i], <VElement>oldChildren[i])
+                removeNode(<Element>node, <Element>oldElements[i], <VElement>oldChildren[i])
             }
             i++
         }
 
         for (var j in oldKeyed) {
             if (!newKeyed[j]) {
-                removeElement(<Element>node, oldKeyed[j][0], oldKeyed[j][1])
+                removeNode(<Element>node, oldKeyed[j][0], oldKeyed[j][1])
             }
         }
     }
