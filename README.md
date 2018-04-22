@@ -75,6 +75,7 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
 - [HTML Helpers](#html-helpers)
 - [Style](#style)
 - [Task List App](#task-list-app)
+- [Scaling State](#scaling-state)
 - [Beyond Immutability](#beyond-immutability)
 - [API Reference](#api-reference)
   * [Component Class API](#component-class-api)
@@ -647,6 +648,32 @@ export class Todos extends Component
 That's the essence of it. However, a more complete example is here: [Play](https://stackblitz.com/edit/pickle-task-list)
 
 Keep things simple! Only write components if they need to manage their own state. In this case, we didn't need a sub component for an individual task.
+
+# Scaling State
+
+Whenever possible your child components shouldn't explictly reference the parent (they *implicitly* use the parent whenever an `update` is called). However, as your application grows in complexity, the child component may need to access parent state. Use the following pattern:
+
+1. The parent component implements an interface for exposing only the state your child needs to see
+2. The child component has a method that returns this.parent cast to the parent interface
+
+So the code structure is as follows:
+
+```typescript
+interface IParent {
+    statefulMethod()	
+}
+
+class ParentComponent extends Component implements IParent {
+    statefulMethod() { return ... }
+    ...
+}
+
+class ChildComponent extends Component {
+    iparent() { return <IParent>this.parent }
+    ...
+}
+```
+This pattern maintains a single source of truth for your state, and minimizes the coupling between the parent and child.
 
 # Beyond Immutability
 
