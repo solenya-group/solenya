@@ -54,8 +54,8 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
 - [Intro to Pickle](#intro-to-pickle)
 - [State, View and Updates](#state--view-and-updates)
 - [Composition](#composition)
-  * [How it Works](#how-it-works)
   * [The @Type Decorator](#the-type-decorator)
+- [Component Initialization](#component-initialization)
 - [Updates](#updates)
   * [Advanced Updates](#advanced-updates)
 - [Views](#views)
@@ -166,17 +166,26 @@ export class Tree extends Component
 ```
 [Play](https://stackblitz.com/edit/pickle-tree)
 
-## How it Works
-
-After the root component is created, it's attached to the `App` object. Once attached, each update traverses the component hierarchy ensuring each child has its `parent` property set. This enables updates to a child to bubble up to the root component, which triggers the `App` to refresh, which will then call the root component's `view` method.
-
 ## The @Type Decorator
 
 The `@Type` decorator from the `class-transformer` library enables your component classes to be deserialized from plain json objects. It's necessary as **Typescript transpiles away property types** (unlike in C# or Java).
 
+# Component Initialization
+
+You component's life begins with a constructor call. As described later, the deserializer will still call your constructor, but then set the object's properties. That's why your constructor's arguments must be optional.
+
+When your app is first created or deserialized, and after every update, a depth-first traversal occurs, where `attached` is called on every component not already attached:
+
+```typescript
+   attached (deserialised: boolean) {
+       ...
+   }
+```
+On the traversal, child components are identified by being properties or property array elements of the parent. As such each child will get attached, and have its `parent` and `app` properties set (except the root component which obviously has an undefined `parent`). This enables updates to a child to bubble up to the root component.
+
 # Updates
 
-All state transitions must occur within an update, app startup, or app deserialization. 
+After app startup or deserialization, all state transitions must occur within an update.
 
 An update is straightforward:
 
@@ -212,14 +221,6 @@ Both `beforeUpdate` and `updated` are called on an update, from child through th
 
 The `payload` property contains any data associated with the update. The `source` property will be set to component that `update` was called on, that's occasionally useful.
 
-In addition, when your app is created or deserialized, `attached` will be called on every component, with a depth-first traversal.
-
-```typescript
-   attached (deserialised: boolean) {
-       ...
-   }
-```
-
 # Views
 
 Views are pure functions of state. Pickle uses a virtual DOM (forked from Ultradom) to efficiently update the actual DOM.
@@ -236,7 +237,7 @@ You can add as may optional parameters as you want to your child component `View
 ```
 `view` methods return the type `VElement`. However, your component might be faceless, having no view implementation, or might have several methods returning different `VElement` objects. This is because pickle components are state-centric, not view-centric.
 
-To write a reusable view, your first approach should be to merely write a function that returns a `VElement`. However, if your view function ends up requiring callbacks to write state back to a component, then you should probably rewrite that view as a component itself, to better encapsulate that state logic.
+To write a reusable view, your first approach should be to merely write a function that returns a `VElement`. However, if your view function ends up requiring callbacks to write state back to a component, then you should consider rewriting that view as a component itself, if that component can better encapsulate that state logic.
 
 You may also call `Component.onRefreshed` to queue a callback to perform DOM side effects after the next refresh. You typically do so in the `view` method:
 
@@ -429,7 +430,7 @@ There's a couple of points to be aware of:
 
 Avoid circular references unless you absolutely need them. Firstly, the serializer doesn't handle them, and secondly, it increases your cyclomatic complexity which is why some languages like F# deliberately force you to minimize them. However, occassionaly you'll need them. To do so:
 
-* override component's `onUpdate` method and set the circular references there
+* override component's `attached` method to set the circular references there
 * exclude the circular references from being serialized with the `@Exclude()` decorator
 
 ## Keep your component state small
