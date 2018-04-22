@@ -651,7 +651,7 @@ Keep things simple! Only write components if they need to manage their own state
 
 # Scaling State
 
-Whenever possible your child components shouldn't explictly reference the parent (they *implicitly* use the parent whenever an `update` is called). However, as your application grows in complexity, the child component may need to access parent state. Use the following pattern:
+You should scale the state in your application primarily with the divide-and-conquer strategy of growing your component tree. Furthermore, whenever possible, your child components shouldn't explictly reference the parent (they *implicitly* use the parent whenever an `update` is called). This strategy minimizes complexity and makes your application easier to reason about. However, sometimes the most elegant solution is indeed for a child component to access its parent state. To do so, use the following pattern:
 
 1. The parent component implements an interface for exposing only the state your child needs to see
 2. The child component has a method that returns this.parent cast to the parent interface
