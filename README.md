@@ -2,7 +2,7 @@
 
 Pickle is the web framework for you if you like:
 
-**No config. No html tags. No css files. Just code.**
+**No config. No boilerplate. Just code.**
 
 Make that **statically typed code**. I.e. **typescript**.
 
@@ -12,7 +12,7 @@ Components represent **application state**. They use the **OO paradigm** because
 
 **Application state is serializable**. That gives you time travel debugging, hot module reloading, transactions, undo/redo etc.
 
-**Typestyle** integrated by default. Because **programming** is cool.
+**Typestyle** integration.
 
 **Composable**.
 
@@ -22,7 +22,7 @@ To be more specific:
 
 I think the functional approach should be used for the parts of your application where you can eliminate state, and the OO approach where you need to manage state. Eschewing OO for managing state necessitates concepts like functional lensing, reducers, and higher-order-components, that turn walking into gymnastics. And frequently boilerplate. Conversely, using stateful components to model reusable views polutes that which can be achieved with a pure functional approach. There wasn't a framework where state management and view generation were treated with these distinct but complementary approaches.
 
-In addition, I also found that few of the APIs were written with a static typing mindset. The typescript definitions were an afterthought, meaning that if you want to use static typing, the experience was obviously compromised. In addition, programmers, who are in the business of abstraction, seem strangely infected with "literalus" - the need to *literally* see HTML tags and *literally* work with css. You can elegantly and uniformally express both of those in typescript. Occam's razor demands it.
+In addition, I also found that few of the APIs were written with a static typing mindset. The typescript definitions were an afterthought, meaning that if you want to use static typing, the experience was obviously compromised. In addition, programmers, who are in the business of abstraction, seem strangely infected with "literalus" - the need to *literally* see HTML tags and *literally* work with css. While pickle doesn't demand it, you can elegantly and uniformally express both of those in typescript. *Occam's razor* demands it.
 
 Finally, pickle is small: see and understand the source code for yourself. Its power comes from its simplicity, and its intended use with many other great libraries:
 
@@ -30,12 +30,12 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
  * typestyle (dependency)
  * typescript & reflect-metadata for reflection (dependency)
  * class-tranformer for serialization (dependency)
- * class-validator for validation
  * any animation API using vdom hooks (as in samples)
- * mjackson/history for managing HTML history 
- * any css framework like bootstrap
- * webpack for hot reloading
- * lodash for great utility functions like debouncing used in the samples
+ * mjackson/history for managing HTML history (as in samples)
+ * any css framework like bootstrap (as in samples)
+ * webpack for hot reloading (as in samples)
+ * lodash for great utility functions like debouncing (as in samples)
+  * class-validator for validation
 
 # Installation
 
@@ -74,8 +74,11 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
 - ['this' Rules](#-this--rules)
 - [HTML Helpers](#html-helpers)
 - [Style](#style)
+  * [Important Gotcha](#important-gotcha)
 - [Task List App](#task-list-app)
-- [Scaling State](#scaling-state)
+- [Child-To-Parent Communication](#child-to-parent-communication)
+  * [Callback Communication](#callback-communication)
+  * [Interface Communication](#interface-communication)
 - [Beyond Immutability](#beyond-immutability)
 - [API Reference](#api-reference)
   * [Component Class API](#component-class-api)
@@ -238,7 +241,7 @@ You can add as may optional parameters as you want to your child component `View
 ```
 `view` methods return the type `VElement`. However, your component might be faceless, having no view implementation, or might have several methods returning different `VElement` objects. This is because pickle components are state-centric, not view-centric.
 
-To write a reusable view, your first approach should be to merely write a function that returns a `VElement`. However, if your view function ends up requiring callbacks to write state back to a component, then you should consider rewriting that view as a component itself, if that component can better encapsulate that state logic.
+To write a reusable view, your first approach should be to merely write a function that returns a `VElement`. Only use child components when you need to encapsulate state.
 
 You may also call `Component.onRefreshed` to queue a callback to perform DOM side effects after the next refresh. You typically do so in the `view` method:
 
@@ -566,7 +569,15 @@ button (
 
 # Style
 
-Pickle accepts [typestyle](https://github.com/typestyle/typestyle) objects for style attributes, letting you write css in typescript. This enables you to abstract and organize your styles with typescript. This lets you express styles in a language (i.e. typescript) that's far more powerful than any stylesheet language, and eliminates the seam between your view funtions and styles. The last point makes it trivial to colocate your code with your styles, or provide exactly the appropriate level of coupling to maximise maintainability.
+While you can use ordinary css or scss files with pickle, pickle has first class support for [typestyle](https://github.com/typestyle/typestyle), that lets you write css in typescript.
+
+The key advantages are:
+
+* Typescript is far more powerful than any stylesheet language - it's a better way to organize and abstract your styles.
+* It eliminates the seam between your view functions and styles - easily pass in variables to dynamically modify styles.
+* You can colocate your code with your styles, or provide exactly the appropriate level of coupling to maximise maintainability.
+
+Here's what it looks like:
 
 ```typescript
 div ({style: {color:'green' }}, 'pickle')
@@ -605,7 +616,11 @@ div ({class: "big"}, {class: "happy"})
 div ({class: "big happy"})
 ```
 
-You may also use ordinary style strings, which bypasses the typestyle library.
+You may also use ordinary style strings rather than objects, which bypasses the typestyle library.
+
+## Important Gotcha
+
+Since style objects are actually converted into classes, they may not override other styles in other classes that apply to that element. If this is a issue either add the `!important` modifier to the style, or revert to a string style. You should however discover that with typestyle you have less need to use the `!important` modifier in the first place as you can better abstract your styles.
 
 # Task List App
 It's common for client-side web frameworks to demonstrate how they'd write a task app. Here's how you write one in pickle:
@@ -645,13 +660,42 @@ export class Todos extends Component
     }
 }
 ```
-That's the essence of it. However, a more complete example is here: [Play](https://stackblitz.com/edit/pickle-task-list)
+That's minimally what's required. However, a more complete example is here: [Play](https://stackblitz.com/edit/pickle-task-list)
 
-Keep things simple! Only write components if they need to manage their own state. In this case, we didn't need a sub component for an individual task.
+# Child-To-Parent Communication
 
-# Scaling State
+Use composition to manage complexity: as your application grows, parent components compose children into larger units of functionality. However, sometimes communication has to go in the reverse direction: from child to parent. We've already seen in the update section that a parent can intercept arbitrary child updates. However, a child can explicitly talk to the parent via callbacks and interfaces.
 
-You should scale the state in your application primarily with the divide-and-conquer strategy of growing your component tree. Furthermore, whenever possible, your child components shouldn't explictly reference the parent (they *implicitly* use the parent whenever an `update` is called). This strategy minimizes complexity and makes your application easier to reason about. However, sometimes the most elegant solution is indeed for a child component to access its parent state. To do so, use the following pattern:
+## Callback Communication
+
+With this approach, the parent passes a callback to the child:
+
+```typescript
+class ParentComponent extends Component {
+    @Type (() => ChildComponent) child: ChildComponent
+    view () {
+        return (
+            ...
+            child.view (someValue, () => this.updateSomeValue())
+            ...
+        )
+    }    
+}
+
+class ChildComponent extends Component {
+    ...
+    view (someValue: string, updateSomeValue?: () => void) : VElement { 
+        ...
+    }
+}
+```
+It's worth repeating that you should only use a child component if the child component has its *own* state. If not, save yourself some typing and replace you child component with a function that returns a `VElement`.
+
+Note that a small design restriction is that the arguments to `view` must be optional to support the parameterless super class `view`.
+
+## Interface Communication
+
+With this pattern:
 
 1. The parent component implements an interface for exposing only the state your child needs to see
 2. The child component has a method that returns this.parent cast to the parent interface
@@ -673,7 +717,11 @@ class ChildComponent extends Component {
     ...
 }
 ```
-This pattern maintains a single source of truth for your state, and minimizes the coupling between the parent and child.
+The purpose of the interface is to reduce the surface area of the parent that the child can see, so that you can more easily reason about your code.
+
+Note that with both callback and interface child-to-parent communication, the single-source-of-truth is always maintained.
+
+Avoid copying state.
 
 # Beyond Immutability
 
