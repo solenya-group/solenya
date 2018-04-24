@@ -74,9 +74,9 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
 - [HTML Helpers](#html-helpers)
 - [Style](#style)
   * [Important Gotcha](#important-gotcha)
-- [Task List App](#task-list-app)
 - [Child-To-Parent Communication](#child-to-parent-communication)
   * [Callback Communication](#callback-communication)
+    * [todoMVC](#todoMVC)
   * [Parent Interface Communication](#parent-interface-communication)
   * [Update Communication](#update-communication)
 - [Beyond Immutability](#beyond-immutability)
@@ -623,7 +623,7 @@ class ParentComponent extends Component {
     view () {
         return (
             ...
-            child.view (someValue, () => this.updateSomeValue())
+            child.view (() => this.updateSomeValue())
             ...
         )
     }    
@@ -631,16 +631,19 @@ class ParentComponent extends Component {
 
 class ChildComponent extends Component {
     ...
-    view (someValue: string, updateSomeValue?: () => void) : VElement { 
+    view (updateSomeValue?: () => void) : VElement { 
         ...
     }
 }
 ```
 It's worth repeating that you should only use a child component if the child component has its *own* state. If not, save yourself some typing and replace your child component with a function that returns a `VElement`.
 
-The following task list sample demonstrates this approach using a child component (`taskItem`), and a function that returns a view (`linkListView`):
+### todoMVC
 
-[Play Task List Sample](https://stackblitz.com/edit/pickle-task-list-factored)
+In these live online examples, we demonstrate two equivalent todoMVC samples. The first is implemented monolithically. The latter evolves that implementation, by using the callback pattern, both when factoring out a child component (`taskItem`), and factoring out a function that returns a view (`linkListView`):
+
+* [Monolithic todoMVC](https://stackblitz.com/edit/pickle-task-list)
+* [Factored todoMVC](https://stackblitz.com/edit/pickle-task-list-factored)
 
 Note that a small design restriction is that the arguments to `view` must be optional to support the parameterless super class `view`.
 
@@ -692,79 +695,6 @@ You can also override `beforeUpdate` to prepare for or cancel any update (by ret
 Both `beforeUpdate` and `updated` are called on an update, from child through the root. This allows a parent to control and respond to updates made by its children, without having to handle specific callbacks.
 
 The `payload` property contains any data associated with the update. The `source` property will be set to component that `update` was called on, which is occasionally useful.
-
-# Task List App
-It's common for client-side web frameworks to demonstrate how they'd write a task app. Here's how you write one in pickle:
-
-```typescript
-export class Todos extends Component
-{    
-    currentText: string
-    list: string[] = []
-
-    add () {
-        this.update(() => {            
-            this.list = this.list.concat (this.currentText!)
-            this.currentText = undefined
-        })
-    }
-
-    delete (task: string) {
-        this.update (() =>
-            this.list = this.list.filter (t => t != task)
-        )
-    }
-
-    view () {
-        return div (
-            inputText (() => this.currentText, e => this.updateProperty (e)),
-            ! this.currentText ? undefined : commandButton (() => this.add(), 'Add'),
-            ul (
-                this.list.map (task =>
-                    li (
-                        task,
-                        commandButton (() => this.delete (task), "delete")
-                    )
-                )
-            )
-        )
-    }
-}
-```
-That's minimally what's required. The following online examples are more fleshed out. Each have exactly the same functionality, but the latter factors out task item into a component, and a list of links into a reusable function. Both samples are provided to give you a sense of how you evolve an application as it grows in complexity.
-
-* [Monolithic Task List](https://stackblitz.com/edit/pickle-task-list)
-* [Factored Task List](https://stackblitz.com/edit/pickle-task-list-factored)
-
-# Beyond Immutability
-
-Pickle's update model is inspired by transactional memory. The idea is we optimistically mutate the current state, but when we want to, we can time travel back to an old state. This gives us the core benefits of immutability, but with a natural programming model. So an ordinary property update is simply:
-
-```typescript
-state.prop++
-```
-rather than with the immutable pattern:
-
-```typescript
-var newState = { ...state, prop: state.prop + 1 }
-```
-and for nested updates:
-
-```typescript
-root.child1.child2.prop++
-```
-Which with immutability, requires tactics such as functional lensing, otherwise you'd have to go:
-
-```typescript
-var newRoot =
-    { ...root, child1:
-        { ...root.child1, child2:
-            { ...root.child1.child2, prop: root.child1.child2.prop + 1 }
-        } 
-    }
-``` 
-
-The other benefit of the transactional memory approach, is we can also have asynchronous methods that optimistically update `this` when continuing. Note that when we time travel, our `this` in that scenario is of course lost.
 
 # API Reference
 
