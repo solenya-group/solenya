@@ -356,7 +356,7 @@ You can also construct your app to automatically save to local storage on each u
 
 Maintaining state history is useful when you want transactions, undo/redo, and time travel debugging.
 
-You can turn time travel on and off through the time object on App:
+You can turn time travel on and off on App as follows:
 
 ```typescript
 app.timeTravelOn = true|false
@@ -603,6 +603,96 @@ You may also use ordinary style strings rather than objects, which bypasses the 
 
 Since style objects are actually converted into classes, they may not override other styles in other classes that apply to that element. If this is a issue either add the `!important` modifier to the style, or revert to a string style. You should however discover that with typestyle you have less need to use the `!important` modifier in the first place as you can better abstract your styles.
 
+# Child-To-Parent Communication
+
+Use composition to manage complexity: as your application grows, parent components compose children into larger units of functionality. However, sometimes communication has to go in the reverse direction: from child to parent. This is done in one of three ways:
+
+* Callbacks
+* Parent Interface
+* Update Path
+
+With all of these approaches, the single-source-of-truth is always maintained. Avoid copying state.
+
+## Callback Communication
+
+With this approach, the parent passes a callback to the child:
+
+```typescript
+class ParentComponent extends Component {
+    @Type (() => ChildComponent) child: ChildComponent
+    view () {
+        return (
+            ...
+            child.view (someValue, () => this.updateSomeValue())
+            ...
+        )
+    }    
+}
+
+class ChildComponent extends Component {
+    ...
+    view (someValue: string, updateSomeValue?: () => void) : VElement { 
+        ...
+    }
+}
+```
+It's worth repeating that you should only use a child component if the child component has its *own* state. If not, save yourself some typing and replace your child component with a function that returns a `VElement`.
+
+The following task list sample demonstrates this approach using a child component (`taskItem`), and a function that returns a view (`linkListView`):
+
+[Play Task List Sample](https://stackblitz.com/edit/pickle-task-list-factored)
+
+Note that a small design restriction is that the arguments to `view` must be optional to support the parameterless super class `view`.
+
+## Parent Interface Communication
+
+With this pattern:
+
+1. The parent component implements an interface for exposing only the state your child needs to see
+2. The child component has a method that returns this.parent cast to the parent interface
+
+So the code structure is as follows:
+
+```typescript
+interface IParent {
+    statefulMethod() : SomeType	
+}
+
+class ParentComponent extends Component implements IParent {
+    statefulMethod() { return ... }
+    ...
+}
+
+class ChildComponent extends Component {
+    iparent() { return <IParent>this.parent }
+    ...
+}
+```
+The purpose of the interface is to reduce the surface area of the parent that the child can see, so that you can more easily reason about your code.
+
+You may also use the `Component`'s `root()`, or `branch()` API (explained in the API section further below) to target a specific ancestor, rather than the immediate parent.
+
+## Update Communication
+
+All state changes to `Component` trigger its `updated` method:
+
+```typescript
+   updated (payload: any) {
+      ...
+   }
+```
+You can also override `beforeUpdate` to prepare for or cancel any update (by returning `false`):
+
+```typescript 
+   beforeUpdate (payload: any) {
+       // return true to go ahead with update
+       // return false to cancel update
+   }
+```
+Both `beforeUpdate` and `updated` are called on an update, from child through the root. This allows a parent to control and respond to updates made by its children, without having to handle specific callbacks.
+
+The `payload` property contains any data associated with the update. The `source` property will be set to component that `update` was called on, which is occasionally useful.
+
 # Task List App
 It's common for client-side web frameworks to demonstrate how they'd write a task app. Here's how you write one in pickle:
 
@@ -641,93 +731,10 @@ export class Todos extends Component
     }
 }
 ```
-That's minimally what's required. However, a more complete example is here: [Play](https://stackblitz.com/edit/pickle-task-list)
+That's minimally what's required. The following online examples are more fleshed out. Each have exactly the same functionality, but the latter factors out task item into a component, and a list of links into a reusable function. Both samples are provided to give you a sense of how you evolve an application as it grows in complexity.
 
-# Child-To-Parent Communication
-
-Use composition to manage complexity: as your application grows, parent components compose children into larger units of functionality. However, sometimes communication has to go in the reverse direction: from child to parent. This is done in one of three ways:
-
-* Callbacks
-* Parent Interface
-* Update Path
-
-With all of these approaches, the single-source-of-truth is always maintained. Avoid copying state.
-
-## Callback Communication
-
-With this approach, the parent passes a callback to the child:
-
-```typescript
-class ParentComponent extends Component {
-    @Type (() => ChildComponent) child: ChildComponent
-    view () {
-        return (
-            ...
-            child.view (someValue, () => this.updateSomeValue())
-            ...
-        )
-    }    
-}
-
-class ChildComponent extends Component {
-    ...
-    view (someValue: string, updateSomeValue?: () => void) : VElement { 
-        ...
-    }
-}
-```
-It's worth repeating that you should only use a child component if the child component has its *own* state. If not, save yourself some typing and replace your child component with a function that returns a `VElement`.
-
-Note that a small design restriction is that the arguments to `view` must be optional to support the parameterless super class `view`.
-
-## Parent Interface Communication
-
-With this pattern:
-
-1. The parent component implements an interface for exposing only the state your child needs to see
-2. The child component has a method that returns this.parent cast to the parent interface
-
-So the code structure is as follows:
-
-```typescript
-interface IParent {
-    statefulMethod()	
-}
-
-class ParentComponent extends Component implements IParent {
-    statefulMethod() { return ... }
-    ...
-}
-
-class ChildComponent extends Component {
-    iparent() { return <IParent>this.parent }
-    ...
-}
-```
-The purpose of the interface is to reduce the surface area of the parent that the child can see, so that you can more easily reason about your code.
-
-You may also use the `Component`'s `root()`, or `branch()` API (explained in the API section further below) to target a specific ancestor, rather than the immediate parent.
-
-## Update Communication
-
-All state changes to `Component` trigger its `updated` method:
-
-```typescript
-   updated (payload: any) {
-      ...
-   }
-```
-You can also override `beforeUpdate` to prepare for or cancel any update (by returning `false`):
-
-```typescript 
-   beforeUpdate (payload: any) {
-       // return true to go ahead with update
-       // return false to cancel update
-   }
-```
-Both `beforeUpdate` and `updated` are called on an update, from child through the root. This allows a parent to control and respond to updates made by its children, without having to handle specific callbacks.
-
-The `payload` property contains any data associated with the update. The `source` property will be set to component that `update` was called on, which is occasionally useful.
+* [Monolithic Task List](https://stackblitz.com/edit/pickle-task-list)
+* [Factored Task List](https://stackblitz.com/edit/pickle-task-list-factored)
 
 # Beyond Immutability
 
