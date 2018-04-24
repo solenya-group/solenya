@@ -76,7 +76,7 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
   * [Important Gotcha](#important-gotcha)
 - [Child-To-Parent Communication](#child-to-parent-communication)
   * [Callback Communication](#callback-communication)
-    * [todoMVC](#todoMVC)
+    * [todoMVC](#todomvc)
   * [Parent Interface Communication](#parent-interface-communication)
   * [Update Communication](#update-communication)
 - [Beyond Immutability](#beyond-immutability)
