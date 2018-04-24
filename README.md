@@ -22,7 +22,7 @@ To be more specific:
 
 I think the functional approach should be used for the parts of your application where you can eliminate state, and the OO approach where you need to manage state. Eschewing OO for managing state necessitates concepts like functional lensing, reducers, and higher-order-components, that turn walking into gymnastics. And frequently boilerplate. Conversely, using stateful components to model reusable views polutes that which can be achieved with a pure functional approach. There wasn't a framework where state management and view generation were treated with these distinct but complementary approaches.
 
-In addition, I also found that few of the APIs were written with a static typing mindset. The typescript definitions were an afterthought, meaning that if you want to use static typing, the experience was obviously compromised. In addition, programmers, who are in the business of abstraction, seem strangely infected with "literalus" - the need to *literally* see HTML tags and *literally* work with css. While pickle doesn't demand it, you can elegantly and uniformally express both of those in typescript. *Occam's razor* demands it.
+In addition, I also found that few of the APIs were written with a static typing mindset. The typescript definitions were an afterthought, meaning that if you want to use static typing, the experience was obviously compromised. In addition, programmers, who are in the business of abstraction, seem strangely infected with "literalus" - the need to *literally* see HTML tags and *literally* work with css. Elegantly and uniformally express HTML and css in typescript. While pickle doesn't require that you to use `typestyle` for css, it has special support for it and highly encourages it, because it deeply addresses the serious programmability and maintainability problems with css.
 
 Finally, pickle is small: see and understand the source code for yourself. Its power comes from its simplicity, and its intended use with many other great libraries:
 
@@ -57,7 +57,6 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
   * [The @Type Decorator](#the-type-decorator)
 - [Component Initialization](#component-initialization)
 - [Updates](#updates)
-  * [Advanced Updates](#advanced-updates)
 - [Views](#views)
   * [Lifecycle Events](#lifecycle-events)
   * [DOM Keys](#dom-keys)    
@@ -78,7 +77,8 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
 - [Task List App](#task-list-app)
 - [Child-To-Parent Communication](#child-to-parent-communication)
   * [Callback Communication](#callback-communication)
-  * [Interface Communication](#interface-communication)
+  * [Parent Interface Communication](#parent-interface-communication)
+  * [Update Communication](#update-communication)
 - [Beyond Immutability](#beyond-immutability)
 - [API Reference](#api-reference)
   * [Component Class API](#component-class-api)
@@ -204,26 +204,7 @@ At the end of an update, the root component's `view` method is called. Updates a
 
 Nested updates are regarded as a single update. The view will at most be called once for an update.
 
-## Advanced Updates
-
-All state changes to `Component` trigger its `updated` method:
-
-```typescript
-   updated (payload: any) {
-      ...
-   }
-```
-You can also override `beforeUpdate` to prepare for or cancel any update (by returning `false`):
-
-```typescript 
-   beforeUpdate (payload: any) {
-       // return true to go ahead with update
-       // return false to cancel update
-   }
-```
-Both `beforeUpdate` and `updated` are called on an update, from child through the root. This allows a parent to control and respond to updates made by its children, without having to handle specific callbacks.
-
-The `payload` property contains any data associated with the update. The `source` property will be set to component that `update` was called on, that's occasionally useful.
+In more advanced scenarios you can capture updates, as explained later in the child-to-parent-communication section.
 
 # Views
 
@@ -664,7 +645,13 @@ That's minimally what's required. However, a more complete example is here: [Pla
 
 # Child-To-Parent Communication
 
-Use composition to manage complexity: as your application grows, parent components compose children into larger units of functionality. However, sometimes communication has to go in the reverse direction: from child to parent. We've already seen in the update section that a parent can intercept arbitrary child updates. However, a child can explicitly talk to the parent via callbacks and interfaces.
+Use composition to manage complexity: as your application grows, parent components compose children into larger units of functionality. However, sometimes communication has to go in the reverse direction: from child to parent. This is done in one of three ways:
+
+* Callbacks
+* Parent Interface
+* Update Path
+
+With all of these approaches, the single-source-of-truth is always maintained. Avoid copying state.
 
 ## Callback Communication
 
@@ -689,11 +676,11 @@ class ChildComponent extends Component {
     }
 }
 ```
-It's worth repeating that you should only use a child component if the child component has its *own* state. If not, save yourself some typing and replace you child component with a function that returns a `VElement`.
+It's worth repeating that you should only use a child component if the child component has its *own* state. If not, save yourself some typing and replace your child component with a function that returns a `VElement`.
 
 Note that a small design restriction is that the arguments to `view` must be optional to support the parameterless super class `view`.
 
-## Interface Communication
+## Parent Interface Communication
 
 With this pattern:
 
@@ -719,9 +706,28 @@ class ChildComponent extends Component {
 ```
 The purpose of the interface is to reduce the surface area of the parent that the child can see, so that you can more easily reason about your code.
 
-Note that with both callback and interface child-to-parent communication, the single-source-of-truth is always maintained.
+You may also use the `Component`'s `root()`, or `branch()` API (explained in the API section further below) to target a specific ancestor, rather than the immediate parent.
 
-Avoid copying state.
+## Update Communication
+
+All state changes to `Component` trigger its `updated` method:
+
+```typescript
+   updated (payload: any) {
+      ...
+   }
+```
+You can also override `beforeUpdate` to prepare for or cancel any update (by returning `false`):
+
+```typescript 
+   beforeUpdate (payload: any) {
+       // return true to go ahead with update
+       // return false to cancel update
+   }
+```
+Both `beforeUpdate` and `updated` are called on an update, from child through the root. This allows a parent to control and respond to updates made by its children, without having to handle specific callbacks.
+
+The `payload` property contains any data associated with the update. The `source` property will be set to component that `update` was called on, which is occasionally useful.
 
 # Beyond Immutability
 
