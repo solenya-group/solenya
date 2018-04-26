@@ -54,7 +54,6 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
 - [Intro to Pickle](#intro-to-pickle)
 - [State, View and Updates](#state--view-and-updates)
 - [Composition](#composition)
-  * [The @Type Decorator](#the-type-decorator)
 - [Component Initialization](#component-initialization)
 - [Updates](#updates)
 - [Views](#views)
@@ -64,9 +63,9 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
 - [App](#app)
 - [Time Travel](#time-travel)
 - [Serialization](#serialization)
+  * [Property Serialization](#property-serialization)
   * [Circular references](#circular-references)
   * [Keep your component state small](#keep-your-component-state-small)
-  * [NaNs](#nans)
 - [Hot Module Reloading](#hot-module-reloading)
 - [Async](#async)
 - [Forms](#forms)
@@ -170,9 +169,7 @@ export class Tree extends Component
 ```
 [Play](https://stackblitz.com/edit/pickle-tree)
 
-## The @Type Decorator
-
-The `@Type` decorator from the `class-transformer` library enables your component classes to be deserialized from plain json objects. It's necessary as **Typescript transpiles away property types** (unlike in C# or Java).
+The `@Type` decorator is explained in the serialization section.
 
 # Component Initialization
 
@@ -396,20 +393,43 @@ app.storage.autosave = false
 app.storage.clear()
 ```
 
-Pickle uses the `class-transformer` npm package to serialize and deserialize your component classes. Nested components need to be decorated as follows to deserialize correctly:
+## Property Serialization
+
+It's critical to be aware that **Typescript transpiles away property types** (unlike in C# or Java). This unfortunately places some burden on you - you must follow some rules - but the payoff is your components nicely serialize. 
+
+Pickle uses the `class-transformer` npm package to serialize and deserialize your component classes. 
+
+Here's an example showing common permutations for serializable properties:
 
 ```typescript
 import { Type } from 'class-transformer'
 
 class MyParent extends Component {
-   @Type (() => MyChild) child: MyChild
+   name: string
+   age = NaN
+   isMale = false
+   @Type (() => Item) myItem: Item
+   @Type (() => Item) myList: Item[] = []
+
+   ...
+
+   attached () {
+      this.age = this.age == null ? NaN : this.age
+   }
 ```
+Here's the rules:
 
-As mentioned previously, that's a little bit of boilerplate but Typescript needs that type information.
+* Initialize fields explicitly - even with empty values - so the serializer can know the type:
+    * For arrays use `[]`
+    * For numbers use `NaN`.
+    * If pickle encounters an `undefined`, it will assume the type is a `string`.
+    * In the `attached` method, convert `null` numbers back to `NaN` numbers.
+* For fields that are themselves components, decorate them with the `@Type` decorator from the `class-transformer` library. This enables your component classes to be deserialized from plain json objects.
+    * For arrays, only specify the *element type*, e.g. `() => Item`, as opposed to `() => Item[]`
 
-When deserializing, as a result of time travel or loading from local storage, your constructors will execute, and then your component's fields will be set.
+Note that there's currently a github work item to automate the `null` to `NaN` conversion by using the `Type` decorator, in keeping with pickle's anti-boilerplate philosophy:
+https://github.com/pickle-ts/pickle/issues/8
 
-There's a couple of points to be aware of:
 
 ## Circular references
 
@@ -423,15 +443,6 @@ Avoid circular references unless you absolutely need them. Firstly, the serializ
 As a general rule, don't gratuitously use component state, and instead try to use pure functions where you can. In particular, avoid storing UI styles in component state - instead pass styles from a parent view down to child views. If you must store a UI style in a component, you'll probably want to decorate it with `@Exclude` to avoid serialization.
 
 Serialization, deserialization, and local storage are surpisingly fast. However, efficiency is still important. Avoid properties with large immutable objects, and instead indirectly reference them with a key. For example, instead of directly storing a localisation table of French data on your component, you'd merely store the string "fr", and return the localisation table based on that key. Minimize the state on your components to that which you need to respond to user actions; keep it as close to a state machine as possible.
-
-## NaNs
-
-Unfortunately, for now `class-transformer` converts `NaN` to `null` values. On deserialization, convert them back. This is a small outstanding issue.
-```
-attached (deserialised: boolean) {
-    this.foo = this == null ? NaN : foo
-}
-```
 
 # Hot Module Reloading
 
@@ -491,8 +502,6 @@ export class BMI extends Component
 [Play](https://stackblitz.com/edit/pickle-bmi)
 
 The `updateProperty` callback takes a `KeyValue` argument, which has a key and value that map to the Component property name and new value. `updateProperty` calls through to the component's `update` for you.
-
-**Always initialise component fields explicitly, and for numbers use NaN rather than undefined**. This is because **Typescript transpiles away property types**, meaning that at runtime pickle can't know whether it's dealing with a string or number, and assumes an undefined value is a string by default, in the absence of a runtime value.
 
 # 'this' Rules
 
