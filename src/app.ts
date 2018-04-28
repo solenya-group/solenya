@@ -95,7 +95,7 @@ export class App
         if (this.activeUpdates > 0)
             return
 
-        this.rootComponent.attach (this, undefined, deserialize)
+        this.rootComponent.attachInternal (this, undefined, deserialize)
       
         if (this.lock)
             return;
@@ -117,7 +117,7 @@ export class App
                 this.isVdomRendered = true
             }   
             
-            this.rootComponent.runRefreshes()
+            this.rootComponent.runRefreshesInternal()
         })
     }
 }

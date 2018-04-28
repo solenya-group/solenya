@@ -35,7 +35,7 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
  * any css framework like bootstrap (as in samples)
  * webpack for hot reloading (as in samples)
  * lodash for great utility functions like debouncing (as in samples)
-  * class-validator for validation
+ * class-validator for validation (as in samples)
 
 # Installation
 
@@ -69,6 +69,7 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
 - [Hot Module Reloading](#hot-module-reloading)
 - [Async](#async)
 - [Forms](#forms)
+  * [Validation](#validation)
 - ['this' Rules](#-this--rules)
 - [HTML Helpers](#html-helpers)
 - [Style](#style)
@@ -78,7 +79,7 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
     * [todoMVC](#todomvc)
   * [Parent Interface Communication](#parent-interface-communication)
   * [Update Communication](#update-communication)
-- [Beyond Immutability](#beyond-immutability)
+  * [HTML History & Routing](#html-history-routing)
 - [API Reference](#api-reference)
   * [Component Class API](#component-class-api)
     * [Component View Members](#component-view-members)
@@ -88,9 +89,6 @@ Finally, pickle is small: see and understand the source code for yourself. Its p
   * [App Class API](#app-class-api)
     * [App Initialization Members](#app-initialization-members)
     * [App Serialization Members](#app-serialization-members)
-- [Use With...](#use-with)
-  * [HTML History](#html-history)
-  * [Validation](#validation)
 
 # Intro to Pickle
 
@@ -395,7 +393,7 @@ app.storage.clear()
 
 ## Property Serialization
 
-It's critical to be aware that **Typescript transpiles away property types** (unlike in C# or Java). This unfortunately places some burden on you - you must follow some rules - but the payoff is your components nicely serialize. 
+It's critical to be aware that **Typescript transpiles away property types** (unlike in C# or Java). This means you must follows some rules to ensure serialization works correctly.
 
 Pickle uses the `class-transformer` npm package to serialize and deserialize your component classes. 
 
@@ -405,31 +403,23 @@ Here's an example showing common permutations for serializable properties:
 import { Type } from 'class-transformer'
 
 class MyParent extends Component {
-   name: string
-   age = NaN
+   name: string   
    isMale = false
+   @Num() age = NaN
    @Type (() => Item) myItem: Item
    @Type (() => Item) myList: Item[] = []
 
    ...
-
-   attached () {
-      this.age = this.age == null ? NaN : this.age
-   }
+}
 ```
 Here's the rules:
 
 * Initialize fields explicitly - even with empty values - so the serializer can know the type:
     * For arrays use `[]`
-    * For numbers use `NaN`.
-    * If pickle encounters an `undefined`, it will assume the type is a `string`.
-    * In the `attached` method, convert `null` numbers back to `NaN` numbers.
+    * For numbers use `NaN` and decorate with `Num()` to ensure deserialization works correctly.
+    * If pickle encounters an `undefined`, it will assume the type is a `string`.    
 * For fields that are themselves components, decorate them with the `@Type` decorator from the `class-transformer` library. This enables your component classes to be deserialized from plain json objects.
     * For arrays, only specify the *element type*, e.g. `() => Item`, as opposed to `() => Item[]`
-
-Note that there's currently a github work item to automate the `null` to `NaN` conversion by using the `Type` decorator, in keeping with pickle's anti-boilerplate philosophy:
-https://github.com/pickle-ts/pickle/issues/8
-
 
 ## Circular references
 
@@ -470,7 +460,15 @@ Note that the samples demonstrate calling github's search, with debouncing.
 
 # Forms
 
-To make writing forms easier, pickle provides some widget functions for common inputs, and provides an `updateProperty` callback for updating properties in the `Component`. In this example, we write a BMI component with two sliders:
+To make writing forms easier, pickle provides some widget functions for common inputs. You can easily build your own ones by examining the widgets source code.
+
+* `slider` : returns an input for selecting a numeric range
+* `inputText` : returns an input for strings or numbers, depending on field type bound to
+* `inputValue` : returns an input for strings, with to/from conversion hooks
+* `selector` : returns a select containing a list of options
+* `radioGroup` : returns a list of radio inputs
+
+In this example, we write a BMI component with two sliders:
 
 ```typescript
 export class BMI extends Component
@@ -501,7 +499,36 @@ export class BMI extends Component
 ```
 [Play](https://stackblitz.com/edit/pickle-bmi)
 
-The `updateProperty` callback takes a `KeyValue` argument, which has a key and value that map to the Component property name and new value. `updateProperty` calls through to the component's `update` for you.
+`Component` has a `updateProperty` method that a `KeyValue` argument, that sets a property on the component, then calls component's `update` for you. All the widget functions take a callback that will plug straight into `updateProperty`. This gives you explicit control over the execution path. You can however write your own higher-level widgets that automatically call `updateProperty` for you.
+
+## Validation
+
+We recommend you use `class-validator` to validate with javascript decorators. This lets you write this type of code:
+
+```typescript
+export class ValidationSample extends MyForm
+{     
+    @MinLength(3) @MaxLength(10) @IsNotEmpty()  username = ""
+    @Num() @Min(0) @Max(10)                     rating = NaN
+    @Num() @IsNumber()                          bonus = NaN
+
+    ok() {
+        this.update(() => { this.validated = true })
+    }
+
+    view () : VElement {           
+        return div (  
+            superInput (myInput, this, () => this.username, "Username"),
+            superInput (myInput, this, () => this.rating, "Rating"),
+            superInput (inputCurrency, this, () => this.bonus, "Bonus"),
+            div (
+                myButton(() => this.ok(), "ok")
+            )
+        )       
+    }
+}
+```
+This is included in the samples under the `validation` sample. In it we write `superInput`, a higher-order function. It takes an input function as a parameter, and adds a label and validation message. Pickle encourages you to write higher-order functions by building on pickle's primitives.
 
 # 'this' Rules
 
@@ -705,6 +732,14 @@ Both `beforeUpdate` and `updated` are called on an update, from child through th
 
 The `payload` property contains any data associated with the update. The `source` property will be set to component that `update` was called on, which is occasionally useful.
 
+## HTML History & Routing
+
+We recommend you use this library:
+
+https://github.com/ReactTraining/history
+
+The `samples` app demonstrates integrating history to provide routing. At its heart, routing is about mapping the path of a url to component state. By responding to history changes, you can set the state which will in turn render the correct view. Often the state in these cases is the name of the component or sub-component that should be rendered at the exclusion of its sibling components.
+
 # API Reference
 
 The `Component` and `App` APIs have been covered in earlier sections, and can also be understood through intellisense and the source code, but are included here to give a reference-oriented overview.
@@ -800,17 +835,3 @@ timeTravelOn: boolean
  */
 snapshot(doSave?: boolean, doTimeSnapshot?: boolean): void
 ```
-
-# Use With...
-
-These libraries weren't mentioned, but are very useful:
-
-## HTML History
-https://github.com/ReactTraining/history
-
-The sample app demonstrates integrating history to provide routing. At its heart, routing is about mapping the path of a url to component state. By responding to history changes, you can set the state which will in turn render the correct view. Often the state in these cases is the name of the component or sub-component that should be rendered at the exclusion of its sibling components.
-
-## Validation
-https://github.com/typestack/class-validator
-
-You'll want to sprinkle your component's properties with validate decorators.

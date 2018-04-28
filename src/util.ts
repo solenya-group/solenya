@@ -1,4 +1,6 @@
-﻿export type KeyValue = {
+﻿import 'reflect-metadata'
+
+export type KeyValue = {
     key: string
     value?: string
 }
@@ -28,10 +30,10 @@ export function literal (html: string) {
 export function parseTyped (s: string|undefined, guideValue: any) {
     if (s == null || guideValue == null)       
         return s
-    var type = guideValue.constructor.toString()
-    if (type.indexOf ("Number") != -1)
+    var type = guessPrimitiveType (guideValue)
+    if (type == "number")
         return parseFloat (s)
-    if (type.indexOf ("Boolean") != -1)
+    if (type == "boolean")
         return Boolean (s)
     return s
 }
@@ -42,4 +44,35 @@ export function Let<T, U>(obj: T, op: (x: T) => U) {
 
 export function isNullOrEmpty (s?: string | null) {
     return s == null || s === ''
+}
+
+// needed to work on ie
+export function guessPrimitiveType (value: any)
+{
+    if (value === undefined)
+        return "undefined"
+    if (value === null)
+        return "null"
+    var type = value.constructor.toString()
+    if (type.indexOf ("Number") != -1)
+        return "number"
+    if (type.indexOf ("Boolean") != -1)
+        return "boolean"
+    return "string"
+}
+
+export function Num() {
+    return Reflect.metadata("num", true);
+}
+
+export function getNum(target: any, propertyKey: string) {
+    return Reflect.getMetadata("num", target, propertyKey);
+}
+
+export function ensureFieldsNums (obj: object) {
+    for (var x of Object.keys(obj))
+        if (getNum(obj, x)) {
+            const n = obj[x]
+            obj[x] = n == null ? NaN : parseFloat (n)
+        }
 }

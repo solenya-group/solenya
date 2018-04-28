@@ -1,6 +1,6 @@
 import { VElement, VAttributes } from './dom'
 import { HValue, button, input, select, option, div, label, span, br, a } from './html'
-import { KeyValue, key, PropertyName, propertyName, Let, fuzzyEquals } from './util'
+import { KeyValue, key, PropertyName, propertyName, Let, fuzzyEquals, guessPrimitiveType } from './util'
 
 export function commandButton(click: () => void, ...values: HValue[]) { 
     return button (
@@ -19,20 +19,73 @@ export function commandLink(click: () => void, ...values: HValue[]) {
         },
         ...values
     )
- }
+}
+
+export function inputValue<T>
+(
+    propertyAccess: () => any,
+    inputAction: (propertyChange: KeyValue) => any,
+    inputStringToValue : (s: string, prevValue: T) => T,
+    valueToInputString : (value: T, prevInputString: string) => string,
+    ...values: HValue[]
+)
+{    
+    var handler = handlePropertyChange(propertyAccess, e =>
+        inputAction (
+        {
+            key : e.key,
+            value : "" + inputStringToValue (e.value || "", propertyAccess())
+        }))
+
+    return input(
+        {
+            value: valueToInputString (propertyAccess(), ""),
+            oninput: handler,
+            onchange: handler,
+            onUpdated: (el: HTMLInputElement) => el.value = valueToInputString (propertyAccess(), el.value)
+        },
+        ...values
+    )  
+}
 
 export function inputText (propertyAccess: () => any, inputAction: (propertyChange: KeyValue) => any, ...values: HValue[])
 {
-    var handler = handlePropertyChange (propertyAccess, inputAction)
-    return input(
-        {
-            value: propertyAccess() || "",  
-            oninput: handler,
-            onchange: handler,
-            onUpdated: (el: any) => el.value = propertyAccess() || ""            
-        },
+    if (guessPrimitiveType (propertyAccess()) == "number")
+        return inputNumber(propertyAccess, inputAction, ...values)
+            
+    return inputValue<string>(
+        propertyAccess,
+        inputAction,        
+        s => s,
+        (s, prevS) => s || "",
         ...values
     )
+}
+
+function inputNumber (propertyAccess: () => any, inputAction: (propertyChange: KeyValue) => any, ...values: HValue[])
+{
+    return inputValue<number>(
+        propertyAccess,
+        inputAction,        
+        inputStringToNumber,
+        numberToInputString,
+        ...values
+    )
+}
+
+export function inputStringToNumber (s: string, prevNumber: number) : number { 
+    return parseFloat (s)
+}
+
+export function numberToInputString (n: number, prevInputString: string) : string {
+    if ("" + n == "NaN") {
+        if (new RegExp ("^[+-.]$").test (prevInputString))
+            return prevInputString
+        return ""
+    }
+    if (parseFloat(prevInputString) == n && new RegExp("^[+-]?([0-9]*[.])?[0-9]*$").test (prevInputString))
+        return prevInputString
+    return "" + n
 }
 
 export function handlePropertyChange (propertyAccess: () => any, action: (propertyChange: KeyValue) => void) {
@@ -61,7 +114,6 @@ export function slider (propertyAccess: () => any, min: number, max: number, ste
 
 export function selector
 (
-    labelNode: string|VElement,
     propertyAccess: () => any,
     options: string[][] = [],
     hasEmpty: boolean = false,
@@ -74,35 +126,23 @@ export function selector
     const id = key (propertyAccess)
 
     return (
-        labeledInput (
-            id,
-            labelNode,
-            select (
-                {
-                    type: "select",
-                    name : id,
-                    id : id,
-                    onchange: handlePropertyChange (propertyAccess, selectAction)
+        select (
+            {
+                type: "select",
+                name : id,
+                id : id,
+                onchange: handlePropertyChange (propertyAccess, selectAction)
+            },
+            ...values,
+            ...allOptions.map (pair =>
+                option ({
+                    value: pair[0],
+                    selected: fuzzyEquals (pair[0], value) ? "selected" : undefined
                 },
-                ...values,
-                ...allOptions.map (pair =>
-                    option ({
-                        value: pair[0],
-                        selected: fuzzyEquals (pair[0], value) ? "selected" : undefined
-                    },
-                        pair[1]
-                    )
+                    pair[1]
                 )
             )
         )
-    )
-}
-
-export function labeledInput(inputId: PropertyName, labelNode: any, inputNode: VElement)
-{
-    return div (
-        label ({ for: propertyName (inputId) }, labelNode),
-        div (inputNode)
     )
 }
 

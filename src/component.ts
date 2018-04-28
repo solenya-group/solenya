@@ -1,7 +1,7 @@
 ﻿import { App } from './app';
 import { div } from './html'
 import { VElement } from './dom'
-import { parseTyped, KeyValue } from './util'
+import { parseTyped, KeyValue, ensureFieldsNums } from './util'
 import { Exclude, classToPlain } from 'class-transformer'
 
 export abstract class Component
@@ -101,23 +101,25 @@ export abstract class Component
     }
 
     /** internal use only */
-    attach (app: App, parent?: Component, deserialize = false) {
+    attachInternal (app: App, parent?: Component, deserialize = false) {
         const detached = this.parent == null && this.app == null
         
         this.parent = parent
         this.app = app
 
         for (var child of this.children())
-            child.attach (app, this, deserialize)
+            child.attachInternal (app, this, deserialize)
 
-        if (detached)
+        if (detached) {
+            ensureFieldsNums (this)
             this.attached (deserialize)             
+        }
     }
 
     /** internal use only */
-    runRefreshes() {
+    runRefreshesInternal() {
         for (var child of this.children())
-            child.runRefreshes()
+            child.runRefreshesInternal()
         while (this.refreshQueue.length)
             this.refreshQueue.shift()!()
     }

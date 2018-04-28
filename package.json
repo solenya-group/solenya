@@ -1,6 +1,6 @@
 {
   "name": "pickle-ts",
-  "version": "0.3.1",
+  "version": "0.5.1",
   "author": "pickle",
   "license": "MIT",
   "repository": {
@@ -12,7 +12,7 @@
   "dependencies": {
     "class-transformer": "^0.1.8",
     "reflect-metadata": "^0.1.12",
-    "typescript": "^2.5.0",
+    "typescript": "^2.7.0",
     "typestyle": "^1.7.2"
   }
 }
