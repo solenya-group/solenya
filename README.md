@@ -1,41 +1,31 @@
-# Why Pickle?
+# Pickle?
 
-Pickle is the web framework for you if you like:
+Pickle is the web framework for you if you like **conceptual simplicity**.
 
-**No config. No boilerplate. Just code.**
+| What | Simple Way | Complicated Way | Notes |
+|-|-|-|-|
+| Type Checking | Just use typescript | Extra testing & tooling to compensate for not using static typing. Makes refactoring horrible. | With type-inference the tax for static typing has never been so low for the benefits it gives.
+| Rendering HTML | Just use typescript. No templating language required |Yet another templating language, w/ constructs reinventing language features for looping, conditionals, etc. etc. etc. with mysterious ad-hoc rules, lacking the consistency and generality of an actual programmming language. | You don't need a templating language if your programming language is expressive. It's also inherently more complex to essentially embed a programming language in strings, rather than embed strings in a programming language.
+| CSS | Just use typescript. Style with `typestyle` | Unmanageable stylesheets, where you can't easily rename, refactor, parameterize, etc. The root of the problem is your styles are expressed in a language that's simplistic and excessively decoupled from your view. | Yes, you can still easily reference ordinary css.
+| Paradigm | Use both functional and OO | Only use the functional approach, even if it means turning walking into gymanastics. Reducers, higher-order-components, functional lensing, boilerplate | OO elegantly models state changes over time, and can complement the functional approach. 
+| Pure Functions | Use whenever possible | Constructs other than functions when pure functions suffice, with custom or hampered composability. Functions unnecessarily riddled with side-effects.
+| Update Path | One-way | Manual updating coupled with some databinding logic w/ its own update path and mysterious property rewriting magic | The virtual DOM approach has some tricky corner cases, but it's mostly a win.
+| State Management | Baked in | Separate state manager library w/ tons of boilerplate | In pickle, components represent state. They're separated from the lifecycle of your views. There's no ~~componentWillMount~~ UNSAFE_componentWillMount method.
+| Serialization | Baked in | Separate serialization library w/ bridge code to components | Time travel debugging, hot module reloading, transactions, undo/redo all use the same single mechanism.
+| Async | Call any async function, then update component state synchronously | Require special support. In some functional reactive frameworks, each component functions as an independent application, necessitating repetitive and complex inter-component wiring simply to regain the synchronicity within each view tree and state tree that should have been implicit |
 
-Make that **statically typed code**. I.e. **typescript**.
+Pickle is small: see and understand the source code for yourself. Its power comes from its simplicity, and its intended use with many other great libraries:
 
-Views use the **functional paradigm**. Views are just functions that return **virtual dom** elements.
-
-Components represent **application state**. They use the **OO paradigm** because the single source of truth should be **tightly coupled** to actions that manage that truth.
-
-**Application state is serializable**. That gives you time travel debugging, hot module reloading, transactions, undo/redo etc.
-
-**Typestyle** integration.
-
-**Composable**.
-
-**Dry**.
-
-To be more specific:
-
-I think the functional approach should be used for the parts of your application where you can eliminate state, and the OO approach where you need to manage state. Eschewing OO for managing state necessitates concepts like functional lensing, reducers, and higher-order-components, that turn walking into gymnastics. And frequently boilerplate. Conversely, using stateful components to model reusable views polutes that which can be achieved with a pure functional approach. There wasn't a framework where state management and view generation were treated with these distinct but complementary approaches.
-
-In addition, I also found that few of the APIs were written with a static typing mindset. The typescript definitions were an afterthought, meaning that if you want to use static typing, the experience was obviously compromised. In addition, programmers, who are in the business of abstraction, seem strangely infected with "literalus" - the need to *literally* see HTML tags and *literally* work with css. Elegantly and uniformally express HTML and css in typescript. While pickle doesn't require that you to use `typestyle` for css, it has special support for it and highly encourages it, because it deeply addresses the serious programmability and maintainability problems with css.
-
-Finally, pickle is small: see and understand the source code for yourself. Its power comes from its simplicity, and its intended use with many other great libraries:
-
- * A virtual DOM based on Ultradom (forked)	
- * typestyle (dependency)
- * typescript & reflect-metadata for reflection (dependency)
- * class-tranformer for serialization (dependency)
- * any animation API using vdom hooks (as in samples)
- * mjackson/history for managing HTML history (as in samples)
- * any css framework like bootstrap (as in samples)
- * webpack for hot reloading (as in samples)
- * lodash for great utility functions like debouncing (as in samples)
- * class-validator for validation (as in samples)
+ * A virtual DOM based on Ultradom *(forked)*
+ * typestyle *(dependency)*
+ * typescript & reflect-metadata for reflection *(dependency)*
+ * class-tranformer for serialization *(dependency)*
+ * any animation API using vdom hooks *(as in samples)*
+ * mjackson/history for managing HTML history *(as in samples)*
+ * any css framework like bootstrap *(as in samples)*
+ * webpack for hot reloading *(as in samples)*
+ * lodash for great utility functions like debouncing *(as in samples)*
+ * class-validator for validation *(as in samples)*
 
 # Installation
 
@@ -101,9 +91,9 @@ export class Counter extends Component
 
     view () {
         return div (
-            button ({ onclick : () => this.add (+1) }, "+"),
+            commandButton (() => this.add (+1), "+"),
             this.count,
-            button ({ onclick : () => this.add (-1) }, "-")     
+            commandButton (() => this.add (-1), "-")     
         )
     }
 
