@@ -303,9 +303,6 @@ export function slideChildren () : VLifecycle
             els.forEach (c => measure(c))
         },
         onUpdated (el) {
-            if (create)
-               return
-
             let els = el["state_slideChildren"] as HTMLElement[]
             els.forEach (c => flip (c))
         }                    
