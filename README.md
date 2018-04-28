@@ -69,7 +69,7 @@ Pickle is small: see and understand the source code for yourself. Its power come
     * [todoMVC](#todomvc)
   * [Parent Interface Communication](#parent-interface-communication)
   * [Update Communication](#update-communication)
-  * [HTML History & Routing](#html-history-routing)
+- [HTML History](#html-history)
 - [API Reference](#api-reference)
   * [Component Class API](#component-class-api)
     * [Component View Members](#component-view-members)
@@ -722,7 +722,7 @@ Both `beforeUpdate` and `updated` are called on an update, from child through th
 
 The `payload` property contains any data associated with the update. The `source` property will be set to component that `update` was called on, which is occasionally useful.
 
-## HTML History & Routing
+## HTML History
 
 We recommend you use this library:
 
