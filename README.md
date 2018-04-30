@@ -102,7 +102,7 @@ export class Counter extends Component
     }
 }
 ```
-[Play](https://stackblitz.com/edit/pickle-counter)
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fcounter.ts)
 
 In pickle, application state lives in your components — in this case `count`.
 
@@ -140,7 +140,7 @@ export class TwinCounters extends Component
     }
 }
 ```
-[Play](https://stackblitz.com/edit/pickle-composition)
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fcomposition.ts)
 
 Components must have parameterless constructors, though they may include *optional* arguments. This small design restriction enables `class-transformer`'s deserializer to work.
 
@@ -155,7 +155,7 @@ export class Tree extends Component
     ...
 }
 ```
-[Play](https://stackblitz.com/edit/pickle-tree)
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Ftree.ts)
 
 The `@Type` decorator is explained in the serialization section.
 
@@ -309,7 +309,7 @@ export function slideChildren () : VLifecycle
     } 
 }
 ```
-[Play](https://stackblitz.com/edit/pickle-animating-a-list)
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2FanimateList.ts)
 
 By design, these lifecycle events are not present on pickle components. Pickle components manage application state, only affecting DOM state via its `view` method, and the intentionally ungranular `onRefreshed` method. This lets you separate the very different lifecycles of application state and DOM state, making your code easier to maintain.
 
@@ -321,10 +321,9 @@ While there's always pragmatic exceptions, the principles of pickle state are:
 
 # App
 
-To start Pickle, pass the constructor of your top level component into your App instance, with a string defining the id of the element where you app will be hosted. You must also import `reflect-metadata` before any of your classes are loaded. For example:
+To start Pickle, pass the constructor of your top level component into your App instance, with a string defining the id of the element where you app will be hosted. For example:
 
 ```typescript
-import 'reflect-metadata'
 import { App } from 'pickle-ts'
 
 var app = new App (Counter, "app")
@@ -358,6 +357,7 @@ You can also use a predicate to seek a particular state:
 ```typescript
 time.seek(state => state.counter.count == 7)
 ```
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2FtimeTravel.ts)
 
 When time travel is on, pickle serializes the component tree on each update. It's efficient and mostly transparent, but make sure to read the serialization section.
 
@@ -441,6 +441,8 @@ Pickle's update path is synchronous, so you perform aynchronous activites outsid
         }
     }
 ```
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2FgitSearch.ts)
+
 Notice that the `update` occurs *after* the asynchronous operation has completed.
 
 Note that the samples demonstrate calling github's search, with debouncing.
@@ -484,7 +486,7 @@ export class BMI extends Component
     }
 }
 ```
-[Play](https://stackblitz.com/edit/pickle-bmi)
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fbmi.ts)
 
 `Component` has a `updateProperty` method that a `KeyValue` argument, that sets a property on the component, then calls component's `update` for you. All the widget functions take a callback that will plug straight into `updateProperty`. This gives you explicit control over the execution path. You can however write your own higher-level widgets that automatically call `updateProperty` for you.
 
@@ -515,6 +517,8 @@ export class ValidationSample extends MyForm
     }
 }
 ```
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fvalidation.ts)
+
 This is included in the samples under the `validation` sample. In it we write `superInput`, a higher-order function. It takes an input function as a parameter, and adds a label and validation message. Pickle encourages you to write higher-order functions by building on pickle's primitives.
 
 # 'this' Rules
@@ -663,10 +667,9 @@ It's worth repeating that you should only use a child component if the child com
 
 ### todoMVC
 
-In these live online examples, we demonstrate two equivalent todoMVC samples. The first is implemented monolithically. The latter evolves that implementation, by using the callback pattern, both when factoring out a child component (`taskItem`), and factoring out a function that returns a view (`linkListView`):
+In this sample, we use the callback pattern, both when factoring out a child component (`taskItem`), and factoring out a function that returns a view (`linkListView`):
 
-* [Monolithic todoMVC](https://stackblitz.com/edit/pickle-task-list)
-* [Factored todoMVC](https://stackblitz.com/edit/pickle-task-list-factored)
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Ftodos.ts)
 
 Note that a small design restriction is that the arguments to `view` must be optional to support the parameterless super class `view`.
 
@@ -725,7 +728,11 @@ We recommend you use this library:
 
 https://github.com/ReactTraining/history
 
-The `samples` app demonstrates integrating history to provide routing. At its heart, routing is about mapping the path of a url to component state. By responding to history changes, you can set the state which will in turn render the correct view. Often the state in these cases is the name of the component or sub-component that should be rendered at the exclusion of its sibling components.
+The `samples` app demonstrates integrating history to provide routing.
+
+[Play](https://stackblitz.com/edit/pickle-samples?file=samples.ts)
+
+At its heart, routing is about mapping the path of a url to component state. By responding to history changes, you can set the state which will in turn render the correct view. Often the state in these cases is the name of the component or sub-component that should be rendered at the exclusion of its sibling components.
 
 # API Reference
 
