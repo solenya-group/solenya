@@ -1,6 +1,10 @@
 # Pickle?
 
-Pickle is the web framework for you if you like **conceptual simplicity**.
+Pickle is the web framework for you if you like **conceptual simplicity**, whether you're writing small or big web apps.
+
+The core of a pickle application consists of a serializable tree of objects representing application state, where any update to an object triggers a portion of that tree to be translated to a virtual DOM tree, that then patches the real DOM.
+
+Writing web applications can quickly get very complicated. This is how pickle makes it simple:
 
 | What | Simple Way | Complicated Way | Notes |
 |-|-|-|-|
@@ -65,6 +69,10 @@ Pickle is small: see and understand the source code for yourself. Its power come
 - [Style](#style)
   * [Important Gotcha](#important-gotcha)
 - [Routing](#routing)
+  - [Composing Routes](#composing-routes)
+  - [Navigation](#navigation)
+  - [Browser History](#browser-history)
+  - [Navigation Links](#navigation-links)
 - [Child-To-Parent Communication](#child-to-parent-communication)
   * [Callback Communication](#callback-communication)
     * [todoMVC](#todomvc)
@@ -665,7 +673,7 @@ Since style objects are actually converted into classes, they may not override o
 
 The pickle library comes with a router, which is used in the samples.
 
-Let's start with a typical routing setup, and then explain what's going on.
+Let's start with a typical routing setup, and then explain what's going on. Suppose we want to write an app that lives on the '/zoo' path of our domain, that has nested pages for animals, such as '/zoo/panda' and '/zoo/lion'. We can achieve that as follows:
 
 ```
 class Zoo extends Component implements IRouted
@@ -695,7 +703,7 @@ class Panda extends Component implements IRouted
 ...
 ```
 
-A component can be routed by implementing `IRouted`. A routed component defined `routeName` property that corresponds to a *name* in a *path*. For example, for the path `/zoo/panda`, the `Zoo` component has a `zoo` `routeName`, and the `Panda` component has a `panda` `routeName`.
+A component can be routed by implementing `IRouted`. A routed component defines a `routeName` property that corresponds to a *name* in a *path*. So for the path `/zoo/panda`, the `Zoo` component has a `zoo` `routeName`, and the `Panda` component has a `panda` `routeName`.
 
 A *current route* is represented with a component route's `currentChildName` value. So the `currentChildName` of `Zoo`'s router is `panda`. The `currentChildName` of `Panda` is simply ``, since it's a leaf node, i.e. itself has no children.
 
@@ -704,6 +712,8 @@ A *current route* is represented with a component route's `currentChildName` val
 Routing is composable: a nested path is represented with a nested component. So the `Panda` component is nested within the `Zoo` component.
 
 If you think of all the possible routes in an application, they form a tree, where any particular branch is composed of the route names from the root routed component to the leaf routed component. So in this application, the possible branches, or paths, are `/zoo/panda` and `/zoo/lion`, and finally possibly just `zoo`, if we don't need a particular animal selected.
+
+## Navigation
 
 You can call a component router's `navigate` method, specifying the child path to go to. All routes are expressed *relatively*, not *absolutely*. In the example above, we use the helper method `pathTail` to lop off the first name (`zoo`) in the path, because the navigation *within* `zoo` is *relative* to `zoo`. In the examples below, we navigate to `panda`:
 
@@ -721,7 +731,7 @@ If `panda` had a `bamboo` child route, you could navigate to it:
 
 ```
 // when navigating from 'panda'
-this.router.root.navigate ('bamboo')
+this.router.navigate ('bamboo')
 
 // when navigating from 'zoo':
 this.router.navigate ('panda/bamboo')
@@ -730,6 +740,16 @@ this.router.navigate ('panda/bamboo')
 this.router.parent.navigate ('panda/bamboo')
 // or:
 this.router.root.navigate ('panda/bamboo')
+```
+
+Navigating to '' is equivalent to navigating to the childName via the parent. So both of the these examples navigate to 'panda':
+
+```
+// when navigating from 'panda':
+this.router.navigate ('')
+
+// when navigating from 'zoo'
+this.router.navigate ('panda')
 ```
 
 ## Browser History
