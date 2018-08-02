@@ -232,6 +232,10 @@ export function i(...values: HValue[]) {
     return h("i", ...values)
 }
 
+export function iframe(...values: HValue[]) {
+    return h("iframe", ...values)
+}
+
 export function img(...values: HValue[]) {
     return h("img", ...values)
 }

@@ -22,48 +22,51 @@ export abstract class Component
         return div ((<any>this.constructor).name)
     }
 
-    /**
-     * Override to capture an update before it occurs, returning `false` to cancel the update
-     * @param payload Contains data associated with update - the update method will set the source property to 'this'
-     */
-    beforeUpdate (payload: any) { return true }
-
     /** Override to listen to an update after its occured
      * @param payload Contains data associated with update - the update method will set the source property to 'this'
      */
     updated (payload: any) { }
 
-    /** Call with action that updates the component's state, with optional payload obect */
-    update(updater: () => void, payload: any = {})
-    {       
+    private branchUpdated (payload: any = {}) {
         payload.source = this
-        try {
-            if (this.app)
-                this.app.activeUpdates++
+        for (var c of this.branch())
+            c.updated (payload)
+    }
 
-            for (var c of this.branch())
-                if (c.beforeUpdate (payload) === false)
-                    return
+    private preUpdate (payload: any = {}) {
+        if (this.app)
+            this.app.activeUpdates++
+    }
 
-            updater()
+    private postUpdate () {
+        if (this.app)
+            this.app.activeUpdates--        
+    }
 
-            for (var c of this.branch())
-                c.updated (payload)
-        }
-        finally {
-            if (this.app)
-                this.app.activeUpdates--
-        }
-
+    private appRefresh() {        
         if (this.app) {
            this.app.snapshot ()
            this.app.refresh ()
         }
     }
 
+    /** Call with action that updates the component's state, with optional payload object */
+    update (updater: () => void, payload: any = {})
+    {               
+        try {
+            this.preUpdate (payload)
+            updater()
+            this.branchUpdated(payload)
+        }
+        finally {
+            this.postUpdate()
+        }
+        this.appRefresh()
+    }
+
     /** A convenient shortcut to update a component property; wraps property change in update */
     updateProperty (payload: KeyValue) {
-        return this.update (() => 
+        this.update (() => 
             this[payload.key] = parseTyped (payload.value, this[payload.key]),
             payload
         )

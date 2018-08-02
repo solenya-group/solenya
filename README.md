@@ -14,18 +14,18 @@ Pickle is the web framework for you if you like **conceptual simplicity**.
 | Serialization | Baked in | Separate serialization library w/ bridge code to components | Time travel debugging, hot module reloading, transactions, undo/redo all use the same single mechanism.
 | Async | Call any async function, then update component state synchronously | Require special support. In some functional reactive frameworks, each component functions as an independent application, necessitating repetitive and complex inter-component wiring simply to regain the synchronicity within each view tree and state tree that should have been implicit |
 
-Pickle is small: see and understand the source code for yourself. Its power comes from its simplicity, and its intended use with many other great libraries:
+Pickle is small: see and understand the source code for yourself. Its power comes from its simplicity, and its integration as well as intended use with many other great libraries:
 
  * A virtual DOM based on Ultradom *(forked)*
  * typestyle *(dependency)*
  * typescript & reflect-metadata for reflection *(dependency)*
  * class-tranformer for serialization *(dependency)*
+ * class-validator is used by pickle validation *(dependency)*
+ * mjackson/history is used by the pickle router *(dependency)*
  * any animation API using vdom hooks *(as in samples)*
- * mjackson/history for managing HTML history *(as in samples)*
  * any css framework like bootstrap *(as in samples)*
  * webpack for hot reloading *(as in samples)*
  * lodash for great utility functions like debouncing *(as in samples)*
- * class-validator for validation *(as in samples)*
 
 # Installation
 
@@ -64,12 +64,12 @@ Pickle is small: see and understand the source code for yourself. Its power come
 - [HTML Helpers](#html-helpers)
 - [Style](#style)
   * [Important Gotcha](#important-gotcha)
+- [Routing](#routing)
 - [Child-To-Parent Communication](#child-to-parent-communication)
   * [Callback Communication](#callback-communication)
     * [todoMVC](#todomvc)
   * [Parent Interface Communication](#parent-interface-communication)
   * [Update Communication](#update-communication)
-- [HTML History](#html-history)
 - [API Reference](#api-reference)
   * [Component Class API](#component-class-api)
     * [Component View Members](#component-view-members)
@@ -79,7 +79,7 @@ Pickle is small: see and understand the source code for yourself. Its power come
   * [App Class API](#app-class-api)
     * [App Initialization Members](#app-initialization-members)
     * [App Serialization Members](#app-serialization-members)
-
+  
 # Intro to Pickle
 
 Let's start with a counter component:
@@ -492,17 +492,26 @@ export class BMI extends Component
 
 ## Validation
 
-We recommend you use `class-validator` to validate with javascript decorators. This lets you write this type of code:
+The pickle library comes with a validator.
+
+The pickle validator builds on the excellent `class-validator` library to validate with javascript decorators. Here's an example of validating some properties on a component:
 
 ```typescript
-export class ValidationSample extends MyForm
+export class ValidationSample extends MyForm implements IValidated
 {     
+    @Exclude() validator: Validator = new Validator (this)
+    
     @MinLength(3) @MaxLength(10) @IsNotEmpty()  username = ""
     @Num() @Min(0) @Max(10)                     rating = NaN
     @Num() @IsNumber()                          bonus = NaN
 
     ok() {
-        this.update(() => { this.validated = true })
+        this.validator.validateThenUpdate()
+    }
+
+    updated (payload: any) {
+        if (this.validator.wasValidated)
+            this.validator.validateThenUpdate (payload)  
     }
 
     view () : VElement {           
@@ -519,7 +528,29 @@ export class ValidationSample extends MyForm
 ```
 [Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fvalidation.ts)
 
-This is included in the samples under the `validation` sample. In it we write `superInput`, a higher-order function. It takes an input function as a parameter, and adds a label and validation message. Pickle encourages you to write higher-order functions by building on pickle's primitives.
+By decorating class properties, you can express constraints.
+
+When you're ready to validate (in this case because the user clicked 'ok'), you call the `validator`'s `validateThenUpdate` method. This compares the component's properties to the constraints on those properties. When complete, the `validationErrors` property on the `validator` will contain an element for each property with constraint violations.
+
+We use the `component`'s update method to keep validated after we've first validated, to give the user continuous feedback. We can also manually flip `wasValidated` back to false.
+
+Importanty, we use a custom `superInput` higher-order function that you can take a look at in the samples. It takes an input function as a parameter, and adds a label and validation message. Pickle encourages you to write higher-order functions by building on pickle's primitives.
+
+Validation works recursively for child components that also implement `IValidated`.
+
+### Asynchronous Validation
+
+Validation can be asynchronous, since you'll sometimes need to call a service to determine validity.
+
+```
+class ValidationSample extends Component implements IValidated
+{
+    async customValidationErrors() {
+        ...
+    }
+}
+```
+The return type is `Promise<ValidationError[]>`, where `ValidationError` is a a type from the `class-validator` package.
 
 # 'this' Rules
 
@@ -630,6 +661,111 @@ You may also use ordinary style strings rather than objects, which bypasses the 
 
 Since style objects are actually converted into classes, they may not override other styles in other classes that apply to that element. If this is a issue either add the `!important` modifier to the style, or revert to a string style. You should however discover that with typestyle you have less need to use the `!important` modifier in the first place as you can better abstract your styles.
 
+# Routing
+
+The pickle library comes with a router, which is used in the samples.
+
+Let's start with a typical routing setup, and then explain what's going on.
+
+```
+class Zoo extends Component implements IRouted
+{
+    @Exclude() router: Router = new Router (this)        
+    @Exclude() routeName = "zoo" 
+    @Type(() => Panda) panda = new Panda()
+    @Type(() => Lion) lion = new Lion()
+
+    childRoute (name: string) { // map name to a component
+        return this[name] as IRouted
+    }
+
+    attached () {
+        this.router.navigate (pathTail (location.pathname))
+        this.router.followHistory()
+    }    
+    ...
+}
+
+class Panda extends Component implements IRouted
+{
+    @Exclude() router: Router = new Router (this)        
+    @Exclude() routeName = "panda" 
+    ...
+}
+...
+```
+
+A component can be routed by implementing `IRouted`. A routed component defined `routeName` property that corresponds to a *name* in a *path*. For example, for the path `/zoo/panda`, the `Zoo` component has a `zoo` `routeName`, and the `Panda` component has a `panda` `routeName`.
+
+A *current route* is represented with a component route's `currentChildName` value. So the `currentChildName` of `Zoo`'s router is `panda`. The `currentChildName` of `Panda` is simply ``, since it's a leaf node, i.e. itself has no children.
+
+## Composing Routes
+
+Routing is composable: a nested path is represented with a nested component. So the `Panda` component is nested within the `Zoo` component.
+
+If you think of all the possible routes in an application, they form a tree, where any particular branch is composed of the route names from the root routed component to the leaf routed component. So in this application, the possible branches, or paths, are `/zoo/panda` and `/zoo/lion`, and finally possibly just `zoo`, if we don't need a particular animal selected.
+
+You can call a component router's `navigate` method, specifying the child path to go to. All routes are expressed *relatively*, not *absolutely*. In the example above, we use the helper method `pathTail` to lop off the first name (`zoo`) in the path, because the navigation *within* `zoo` is *relative* to `zoo`. In the examples below, we navigate to `panda`:
+
+```
+// when navigating from 'zoo':
+this.router.navigate ('panda')
+
+// when navigating from 'lion'
+this.router.parent.navigate ('panda')
+// or:
+this.router.root.navigate ('panda')
+```
+
+If `panda` had a `bamboo` child route, you could navigate to it:
+
+```
+// when navigating from 'panda'
+this.router.root.navigate ('bamboo')
+
+// when navigating from 'zoo':
+this.router.navigate ('panda/bamboo')
+
+// when navigating from 'lion'
+this.router.parent.navigate ('panda/bamboo')
+// or:
+this.router.root.navigate ('panda/bamboo')
+```
+
+## Browser History
+
+Navigation will trigger a change to the browser's history. Reciprocally, a change to the browser's history will trigger a call to the `navigate` method of the root component's router, all the way down to the leaf component's router. We call `followHistory` in the root router once in the application to follow history changes. This enables the back button to trigger a navigation.
+
+The router internally uses the `history` api to respond to browser navigation events.
+
+## Intercepting Navigation
+
+It's important to be able to intercept navigation.
+
+ * Prevention: We don't want the user to leave the current form until it's validated, or perhaps we want to redirect the user to another route
+ * Preparation: We need to fetch data before we can complete the navigation.
+ * Redirection: We want to redirect the user by canceling the current navigation and navigating to a new path.
+
+We intercept `navigate` by implementing `beforeNavigate`.
+
+```
+   async beforeNavigate (name: string, action?: Action) : Promise<boolean>
+   {
+      // unhappy with the navigation, want to prevent or perhaps manually navigate
+      return false
+      
+      // happy with the navigation:
+      return true
+   }
+```
+## Navigation Links
+
+For convenience, `router` has a function for generating navigation links. These look like ordinary url links, but they use the `onclick` event to ensure the router's navigation method is called, rather than jumping to a new page:
+
+```
+navigateLink (path: string, ...content: HValue[])
+```
+
 # Child-To-Parent Communication
 
 Use composition to manage complexity: as your application grows, parent components compose children into larger units of functionality. However, sometimes communication has to go in the reverse direction: from child to parent. This is done in one of three ways:
@@ -710,29 +846,9 @@ All state changes to `Component` trigger its `updated` method:
       ...
    }
 ```
-You can also override `beforeUpdate` to prepare for or cancel any update (by returning `false`):
-
-```typescript 
-   beforeUpdate (payload: any) {
-       // return true to go ahead with update
-       // return false to cancel update
-   }
-```
-Both `beforeUpdate` and `updated` are called on an update, from child through the root. This allows a parent to control and respond to updates made by its children, without having to handle specific callbacks.
+The `updated` method will be subsequently called on each parent through the root. This allows a parent to respond tp updates made by its children, without having to handle specific callbacks.
 
 The `payload` property contains any data associated with the update. The `source` property will be set to component that `update` was called on, which is occasionally useful.
-
-## HTML History
-
-We recommend you use this library:
-
-https://github.com/ReactTraining/history
-
-The `samples` app demonstrates integrating history to provide routing.
-
-[Play](https://stackblitz.com/edit/pickle-samples?file=samples.ts)
-
-At its heart, routing is about mapping the path of a url to component state. By responding to history changes, you can set the state which will in turn render the correct view. Often the state in these cases is the name of the component or sub-component that should be rendered at the exclusion of its sibling components.
 
 # API Reference
 
@@ -763,11 +879,6 @@ attached (deserialized: boolean)
 ```typescript
 /** Call with action that updates the component's state, with optional payload */
 update (updater: () => void, payload: any = {}) 
-
-/** Override to capture an update before it occurs, returning `false` to cancel the update
-* @param payload Contains data associated with update - the update method will set the source property to 'this'
-*/
-beforeUpdate (payload: any) : boolean
 
 /** Override to listen to an update after its occured
 * @param payload Contains data associated with update - the update method will set the source property to 'this'

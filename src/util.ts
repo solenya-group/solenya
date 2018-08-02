@@ -34,7 +34,7 @@ export function parseTyped (s: string|undefined, guideValue: any) {
     if (type == "number")
         return parseFloat (s)
     if (type == "boolean")
-        return Boolean (s)
+        return s == "true"
     return s
 }
 

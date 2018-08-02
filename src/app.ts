@@ -26,7 +26,7 @@ export class App
      * @param rootComponentConstructor The parameterless constructor of the root component
      * @param containerId The element id to render the view, and local storage name
      */
-    constructor (rootComponentConstructor : new() => Component, containerId: string)
+    constructor (rootComponentConstructor : new() => Component, containerId: string, rootComponent?: Component)
     {               
         this.rootElement = document.getElementById (containerId)!        
 
@@ -46,7 +46,7 @@ export class App
         this.storage.load ()
 
         if (! this.rootComponent)
-            this.setRootComponent (new rootComponentConstructor())
+            this.setRootComponent (rootComponent || new rootComponentConstructor())
     }
 
     /** Root component of updates, view and serialization */

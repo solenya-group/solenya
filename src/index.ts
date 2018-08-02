@@ -2,6 +2,8 @@
 export { App } from './app'
 export { TimeTravel } from './timeTravel'
 export { Storage } from './storage'
+export { Validator, IValidated } from './validation'
+export { Router, IRouted, pathHead, pathTail, combinePaths, equalsIgnoreCase } from './router'
 export { VElement, VNode, VAttributes, VLifecycle, isVElement, createVElement, merge } from './dom'
 export { literal, KeyValue, isNullOrEmpty, key, Let, Num } from './util'
 export { commandButton, commandLink, inputText, inputValue, slider, radioGroup, selector } from './widgets'
