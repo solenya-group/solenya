@@ -36,17 +36,22 @@ export class App
             )
         )
 
+        var newRoot = (rootComponent || new rootComponentConstructor())
+        newRoot.initDecorators()
+
         this.storage = new Storage
         (
             containerId,
             () => serialize (this.rootComponent),
-            serialized => this.setRootComponent (<Component> deserialize (rootComponentConstructor, serialized), true, false)
+            serialized => {                                
+                this.setRootComponent (<Component> deserialize (rootComponentConstructor, serialized), true, false)
+            }
         )
 
         this.storage.load ()
 
         if (! this.rootComponent)
-            this.setRootComponent (rootComponent || new rootComponentConstructor())
+            this.setRootComponent (newRoot)
     }
 
     /** Root component of updates, view and serialization */

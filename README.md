@@ -137,8 +137,8 @@ Composition is straightforward with `pickle`, allowing you to factor your applic
 ```typescript
 export class TwinCounters extends Component
 {
-    @Type (() => Counter) counter1 = new Counter ()
-    @Type (() => Counter) counter2 = new Counter ()
+    counter1 = new Counter ()
+    counter2 = new Counter ()
 
     view () {
         return div (
@@ -154,7 +154,7 @@ Components must have parameterless constructors, though they may include *option
 
 Child components should be created in the constructors, field initialisers, and updates of their parents.
 
-You can specific arrays of components, recursive components, or even arrays of recursive components. Here's from one of the samples:
+You can specific arrays of components, recursive components, or even arrays of recursive components. Here's from one of the samples. The type annotation is required to allow deserialization to work for arrays, as typescript erases the type of the property after compilation.
 
 ```typescript
 export class Tree extends Component
@@ -164,8 +164,6 @@ export class Tree extends Component
 }
 ```
 [Play](https://stackblitz.com/edit/pickle-samples?file=app%2Ftree.ts)
-
-The `@Type` decorator is explained in the serialization section.
 
 # Component Initialization
 
@@ -401,7 +399,7 @@ class MyParent extends Component {
    name: string   
    isMale = false
    @Num() age = NaN
-   @Type (() => Item) myItem: Item
+   myItem = new Item()
    @Type (() => Item) myList: Item[] = []
 
    ...
@@ -413,8 +411,7 @@ Here's the rules:
     * For arrays use `[]`
     * For numbers use `NaN` and decorate with `Num()` to ensure deserialization works correctly.
     * If pickle encounters an `undefined`, it will assume the type is a `string`.    
-* For fields that are themselves components, decorate them with the `@Type` decorator from the `class-transformer` library. This enables your component classes to be deserialized from plain json objects.
-    * For arrays, only specify the *element type*, e.g. `() => Item`, as opposed to `() => Item[]`
+* For fields that are arrays of components or have self-referential type definitions, decorate them with the `@Type` decorator from the `class-transformer` library. This enables your component classes to be deserialized from plain json objects.
 
 ## Circular references
 
@@ -680,8 +677,8 @@ class Zoo extends Component implements IRouted
 {
     @Exclude() router: Router = new Router (this)        
     @Exclude() routeName = "zoo" 
-    @Type(() => Panda) panda = new Panda()
-    @Type(() => Lion) lion = new Lion()
+    panda = new Panda()
+    lion = new Lion()
 
     childRoute (name: string) { // map name to a component
         return this[name] as IRouted

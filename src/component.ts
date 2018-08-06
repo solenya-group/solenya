@@ -2,7 +2,8 @@
 import { div } from './html'
 import { VElement } from './dom'
 import { parseTyped, KeyValue, ensureFieldsNums } from './util'
-import { Exclude, classToPlain } from 'class-transformer'
+import { Exclude, Type } from 'class-transformer'
+
 
 export abstract class Component
 {
@@ -112,7 +113,7 @@ export abstract class Component
 
         for (var child of this.children())
             child.attachInternal (app, this, deserialize)
-
+       
         if (detached) {
             ensureFieldsNums (this)
             this.attached (deserialize)             
@@ -131,4 +132,25 @@ export abstract class Component
     onRefreshed (action: () => void) {
         this.refreshQueue.push (action)
     }
+
+    initDecorators() {
+         for (var propName of Object.keys (this))
+         {
+            const propValue = this[propName]
+            if (! (propValue instanceof Component) || propValue == this)
+                continue;
+
+            propValue.initDecorators()            
+            Type (() => propValue.constructor)(this, propName)
+                                
+            if (propValue["isSerializeMarker"])
+                this[propName] = undefined                
+        }
+    }
+}
+
+export function typed<T>(x: new () => T) : T | undefined {
+    var obj = new x()
+    obj["isSerializeMarker"] = true
+    return obj
 }

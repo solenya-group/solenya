@@ -12,7 +12,13 @@ export function propertyName(name: PropertyName) {
 }
 
 export function key (propertyAccess: () => any) {
-    return (""+propertyAccess).match (/\.(.*);/)![1]
+    return (""+propertyAccess).match (/\.([a-zA-Z_$][0-9a-zA-Z_$]*)[^\.]*$/)![1]
+}
+
+export function equalsIgnoreCase(a: string, b: string) {
+    if (a == b) return true
+    if (a == null || b == null) return false
+    return a.toLowerCase() == b.toLowerCase()
 }
 
 export function fuzzyEquals(x: any, y: any) {
