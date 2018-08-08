@@ -69,7 +69,6 @@ Pickle is small: see and understand the source code for yourself. Its power come
 - [Style](#style)
   * [Important Gotcha](#important-gotcha)
 - [Routing](#routing)
-  - [Composing Routes](#composing-routes)
   - [Navigation](#navigation)
   - [Browser History](#browser-history)
   - [Navigation Links](#navigation-links)
@@ -555,7 +554,7 @@ Validation works recursively for child components that also implement `IValidate
 
 Validation can be asynchronous, since you'll sometimes need to call a service to determine validity.
 
-```
+```typescript
 class ValidationSample extends Component implements IValidated
 {
     async customValidationErrors() {
@@ -719,7 +718,7 @@ A component can be routed by implementing `IRouted`. A routed component defines 
 
 So for the path `/tabSample/banana`, there's a component with the `tabSample` `routeName`, which has a child component with the `banana` `routeName`. The root component, `Samples` has an empty string for its routeName.
 
-A *current route* is represented with a component route's `currentChildName` value. So the `currentChildName` of the `Samples` component's router is `tabSamples`, and the `curentChildName` of the `TabSample` component's router is `banana`. Finally, the `currentChildName` of the `banana` component is simply ``, since it's a leaf node, i.e. itself has no children.
+A *current route* is represented with a component route's `currentChildName` value. So the `currentChildName` of the `Samples` component's router is `tabSamples`, and the `curentChildName` of the `TabSample` component's router is `banana`. Finally, the `currentChildName` of the `banana` component's router is simply ``, since it's a leaf node, i.e. itself has no children.
 
 The `childRoute` method is used by a parent router to map a name to child name. In this case, we use a straightforward mapping based on the property name of the child component.
 
@@ -743,7 +742,7 @@ this.router.root.navigate ('tabSample/banana')
 
 ## Browser History
 
-Navigation will trigger a change to the browser's history. Reciprocally, we want a change to the browser's history to trigger a call to the `navigate` method of the root component's router, all the way down to the leaf component's router. We set this up by calling `followHistory` on the root router. This enables the back button to trigger a navigation.
+Navigation will trigger a change to the browser's history. Reciprocally, we want a change to the browser's history to trigger a call to the `navigate` method of the root component's router. We set this up by calling `followHistory` on the root router. This enables the back button to trigger a navigation.
     
 ```
 export class Samples extends Component implements IRouted
@@ -767,6 +766,20 @@ The router internally uses the `history` api to respond to browser navigation ev
 
 ## Intercepting Navigation
 
+We can implement the `navigated` method to detect when a component is routed. We do this in the `Relativity` sample, where we have a continuous animation that we want to trigger when the component is routed:
+
+```typescript
+export class Relativity extends Component {
+    navigated() {
+        ...
+    }
+}
+```
+
+[play](https://stackblitz.com/edit/pickle-samples?file=app%2Frelativity.ts)
+
+`navigated` will be called for each component in the path.
+
 We intercept `navigate` by implementing `beforeNavigate`. It's important to be able to intercept navigation for several reasons:
 
  * Prevention: We don't want the user to leave the current form until it's validated, or perhaps we want to redirect the user to another route
@@ -775,7 +788,7 @@ We intercept `navigate` by implementing `beforeNavigate`. It's important to be a
 
 In the `TabGroup` component, we use `beforeNavigate` for two purposes. First, we want to redirect to the first nested tab if no tab is selected. Second, we want to animate the tab left or right, depending on whether the new tab's index is less than or greater than its previous index.
 
-```
+```typescript
 export abstract class TabGroup extends Component implements IRouted
 {
     @Exclude() router: Router = new Router (this)
@@ -803,12 +816,13 @@ export abstract class TabGroup extends Component implements IRouted
         return true
     }
 ```
+[play](https://stackblitz.com/edit/pickle-samples?file=app%2FtabSample.ts)
 
 We return `false` when we want to cancel a navigation, and `true` when we're happy that the navigation goes ahead. The `beforeNavigate` method works very well in tandum with validation, that we discussed earlier. If your current state isn't valid, it's very common to prevent the navigation occuring by returning `false`.
 
 We can now use `TabGroup` as follows:
 
-```
+```typescript
 export class TabSample extends TabGroup
 {  
     apple = new MyTabContent ("Apples are delicious")
@@ -821,7 +835,7 @@ export class TabSample extends TabGroup
 
 For convenience, `router` has a function for generating navigation links. These look like ordinary url links, but they use the `onclick` event to ensure the router's navigation method is called, rather than jumping to a new page:
 
-```
+```typescript
 navigateLink (path: string, ...content: HValue[])
 ```
 
