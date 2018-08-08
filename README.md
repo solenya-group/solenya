@@ -335,9 +335,13 @@ import { App } from 'pickle-ts'
 var app = new App (Counter, "app")
 ```
 
-You can access the app's `time` property to perform time travel.
+You can also construct the application from an explicit instance. This can be useful when you've deserialized the component from somewhere else, such as a server:
 
-You can also construct your app to automatically save to local storage on each update, as explained in the serialization section.
+```typescript
+var app = new App (Counter, "app", counterFromTheWeb)
+```
+
+You can access the app's `time` property to perform time travel.
 
 # Time Travel
 
@@ -386,32 +390,32 @@ app.storage.clear()
 
 ## Property Serialization
 
-It's critical to be aware that **Typescript transpiles away property types** (unlike in C# or Java). This means you must follows some rules to ensure serialization works correctly.
-
-Pickle uses the `class-transformer` npm package to serialize and deserialize your component classes. 
-
-Here's an example showing common permutations for serializable properties:
+It's critical to be aware that **Typescript transpiles away property types** (unlike in C# or Java). This means there's a handful of rules you need to follow to ensure property serialization works perfectly. This component shows the possibilities you need to be aware of:
 
 ```typescript
 import { Type } from 'class-transformer'
 
-class MyParent extends Component {
+class Person extends Component {
    name: string   
    isMale = false
    @Num() age = NaN
    myItem = new Item()
+   @Type (() => Item) mySometimesUndefinedItem?: Item   
    @Type (() => Item) myList: Item[] = []
-
    ...
 }
 ```
 Here's the rules:
 
-* Initialize fields explicitly - even with empty values - so the serializer can know the type:
-    * For arrays use `[]`
-    * For numbers use `NaN` and decorate with `Num()` to ensure deserialization works correctly.
-    * If pickle encounters an `undefined`, it will assume the type is a `string`.    
-* For fields that are arrays of components or have self-referential type definitions, decorate them with the `@Type` decorator from the `class-transformer` library. This enables your component classes to be deserialized from plain json objects.
+* If on deserialization an undefined value is encountered, and its non-undefined type needs to be guessed, that type will be `string`.
+* Initialize numbers with `NaN` and decorate with `Num()`. Do **not** use `undefined` or `null` for representing serializable numbers.
+* Initialize booleans with concrete values. Do **not** use `undefined` or `null` for representing serializable booleans.
+* For fields that are classes, use the `@Type` decorator from the `class-transformer` library. If you don't, your fields will come back as json objects upon deserialization.
+* For fields that are arrays of classes, use the `@Type` decorator, and do **not** include the `[]`
+
+Pickle also has some default behaviour to make your life easier. When your app starts, pickle will scan your component tree, and automatically add the `@Type` decorator to non-undefined fields of type component. If you're deserializing a component type not already in your component tree, you can also trigger this scan by calling `initDecorators` in your component's constructor.
+
+Pickle uses the `class-transformer` npm package to serialize and deserialize your component classes. 
 
 ## Circular references
 
@@ -430,10 +434,14 @@ Serialization, deserialization, and local storage are surpisingly fast. However,
 
 When your application state is serialized, an ordinary page refresh will run your modified code with your previous state. We can automatically trigger a page refresh by listening to server code changes:
 
-```typescript
-module.hot.accept('../app/samples', () => { location.reload() })
-
 ```
+module.hot.accept('../app/samples', () => {
+    var latest = require ('../app/samples')
+    window["app"] = new App (latest.Samples.prototype.constructor, "app", undefined, true)
+})
+```
+The `true` parameter tells the new app instance that there's already a rendered tree, so do a patch rather than create the DOM from scratch.
+
 # Async
 
 Pickle's update path is synchronous, so you perform aynchronous activites outside of update. Suppose a button invokes your submit event handler that calls a web service. That could be defined as follows: 
@@ -668,113 +676,147 @@ Since style objects are actually converted into classes, they may not override o
 
 # Routing
 
-The pickle library comes with a router, which is used in the samples.
+The pickle library comes with a composable router.
 
-Let's start with a typical routing setup, and then explain what's going on. Suppose we want to write an app that lives on the '/zoo' path of our domain, that has nested pages for animals, such as '/zoo/panda' and '/zoo/lion'. We can achieve that as follows:
+The samples use routing in two places. First, each sample has it's own route. Second, we use a router so that each tab in the "tabSample" has a nested route. So here's the possible routes:
 
 ```
-class Zoo extends Component implements IRouted
-{
-    @Exclude() router: Router = new Router (this)        
-    @Exclude() routeName = "zoo" 
-    panda = new Panda()
-    lion = new Lion()
+/counter
+/bmi
+/tabSample/apple
+/tabSample/banana
+/tabSample/cantaloupe
+```
 
-    childRoute (name: string) { // map name to a component
-        return this[name] as IRouted
+Let's start with the outer router first. 
+
+```
+export class Samples extends Component implements IRouted
+{
+    @Exclude() router:Router = new Router (this)
+    @Exclude() routeName = ""
+
+    counter = new Counter ()
+    bmi = new BMI ()    
+    tabSample = new TabSample ()
+    ...
+    
+    attached()
+    {
+        for (var k of this.childrenKeys()) {
+            this[k].router = new Router(this[k])
+            this[k].routeName = k
+        }
+        ...
     }
 
-    attached () {
-        this.router.navigate (pathTail (location.pathname))
-        this.router.followHistory()
-    }    
-    ...
+    childRoute (name: string) {        
+        return this[name]
+    }
 }
-
-class Panda extends Component implements IRouted
-{
-    @Exclude() router: Router = new Router (this)        
-    @Exclude() routeName = "panda" 
-    ...
-}
-...
 ```
+A component can be routed by implementing `IRouted`. A routed component defines a `routeName` property that corresponds to a *name* in a *path*.
 
-A component can be routed by implementing `IRouted`. A routed component defines a `routeName` property that corresponds to a *name* in a *path*. So for the path `/zoo/panda`, the `Zoo` component has a `zoo` `routeName`, and the `Panda` component has a `panda` `routeName`.
+So for the path `/tabSample/banana`, there's a component with the `tabSample` `routeName`, which has a child component with the `banana` `routeName`. The root component, `Samples` has an empty string for its routeName.
 
-A *current route* is represented with a component route's `currentChildName` value. So the `currentChildName` of `Zoo`'s router is `panda`. The `currentChildName` of `Panda` is simply ``, since it's a leaf node, i.e. itself has no children.
+A *current route* is represented with a component route's `currentChildName` value. So the `currentChildName` of the `Samples` component's router is `tabSamples`, and the `curentChildName` of the `TabSample` component's router is `banana`. Finally, the `currentChildName` of the `banana` component is simply ``, since it's a leaf node, i.e. itself has no children.
 
-## Composing Routes
-
-Routing is composable: a nested path is represented with a nested component. So the `Panda` component is nested within the `Zoo` component.
-
-If you think of all the possible routes in an application, they form a tree, where any particular branch is composed of the route names from the root routed component to the leaf routed component. So in this application, the possible branches, or paths, are `/zoo/panda` and `/zoo/lion`, and finally possibly just `zoo`, if we don't need a particular animal selected.
+The `childRoute` method is used by a parent router to map a name to child name. In this case, we use a straightforward mapping based on the property name of the child component.
 
 ## Navigation
 
-You can call a component router's `navigate` method, specifying the child path to go to. All routes are expressed *relatively*, not *absolutely*. In the example above, we use the helper method `pathTail` to lop off the first name (`zoo`) in the path, because the navigation *within* `zoo` is *relative* to `zoo`. In the examples below, we navigate to `panda`:
+You can call a component router's `navigate` method, specifying the child path to go to. All routes are expressed *relatively*, not *absolutely*. In the examples below, we navigate to `banana`:
 
 ```
-// when navigating from 'zoo':
-this.router.navigate ('panda')
-
-// when navigating from 'lion'
-this.router.parent.navigate ('panda')
-// or:
-this.router.root.navigate ('panda')
-```
-
-If `panda` had a `bamboo` child route, you could navigate to it:
-
-```
-// when navigating from 'panda'
-this.router.navigate ('bamboo')
-
-// when navigating from 'zoo':
-this.router.navigate ('panda/bamboo')
-
-// when navigating from 'lion'
-this.router.parent.navigate ('panda/bamboo')
-// or:
-this.router.root.navigate ('panda/bamboo')
-```
-
-Navigating to '' is equivalent to navigating to the childName via the parent. So both of the these examples navigate to 'panda':
-
-```
-// when navigating from 'panda':
+// when navigating from 'banana':
 this.router.navigate ('')
 
-// when navigating from 'zoo'
-this.router.navigate ('panda')
+// when navigating from 'tabSample':
+this.router.navigate ('banana')
+
+// when navigating from 'apple', via the parent
+this.router.parent.navigate ('banana')
+
+// when navigating from 'apple', via the root
+this.router.root.navigate ('tabSample/banana')
 ```
 
 ## Browser History
 
-Navigation will trigger a change to the browser's history. Reciprocally, a change to the browser's history will trigger a call to the `navigate` method of the root component's router, all the way down to the leaf component's router. We call `followHistory` in the root router once in the application to follow history changes. This enables the back button to trigger a navigation.
+Navigation will trigger a change to the browser's history. Reciprocally, we want a change to the browser's history to trigger a call to the `navigate` method of the root component's router, all the way down to the leaf component's router. We set this up by calling `followHistory` on the root router. This enables the back button to trigger a navigation.
+    
+```
+export class Samples extends Component implements IRouted
+{
+    attached()
+    {
+        ...
+
+        this.router.navigate (location.pathname != "/" ?
+            location.pathname :
+            key (() => this.counter))
+
+        this.router.followHistory()     
+    }
+    ...
+}
+```
+In this case, if the path is `/` we map it to the `counter` component.
 
 The router internally uses the `history` api to respond to browser navigation events.
 
 ## Intercepting Navigation
 
-It's important to be able to intercept navigation.
+We intercept `navigate` by implementing `beforeNavigate`. It's important to be able to intercept navigation for several reasons:
 
  * Prevention: We don't want the user to leave the current form until it's validated, or perhaps we want to redirect the user to another route
- * Preparation: We need to fetch data before we can complete the navigation.
+ * Preparation: We need to fetch data, perhaps asynchronously, before we can complete the navigation.
  * Redirection: We want to redirect the user by canceling the current navigation and navigating to a new path.
 
-We intercept `navigate` by implementing `beforeNavigate`.
+In the `TabGroup` component, we use `beforeNavigate` for two purposes. First, we want to redirect to the first nested tab if no tab is selected. Second, we want to animate the tab left or right, depending on whether the new tab's index is less than or greater than its previous index.
 
 ```
-   async beforeNavigate (name: string, action?: Action) : Promise<boolean>
-   {
-      // unhappy with the navigation, want to prevent or perhaps manually navigate
-      return false
-      
-      // happy with the navigation:
-      return true
-   }
+export abstract class TabGroup extends Component implements IRouted
+{
+    @Exclude() router: Router = new Router (this)
+    @Exclude() routeName!: string   
+
+    attached() {
+        for (var k of this.childrenKeys()) {
+            this[k].router = new Router (this[k])
+            this[k].routeName = k
+        }
+    } 
+
+    childRoute (name: string) {
+        return this[name]
+    }
+
+    async beforeNavigate (childPath: string) {
+        const kids = this.childrenKeys()
+        if (childPath == '') {
+            this.router.navigate (this.router.currentChildComponent ? this.router.currentChildName : kids[0])
+            return false
+        }
+
+        this.slideForward = kids.indexOf (childPath) > kids.indexOf (this.router.currentChildName)
+        return true
+    }
 ```
+
+We return `false` when we want to cancel a navigation, and `true` when we're happy that the navigation goes ahead. The `beforeNavigate` method works very well in tandum with validation, that we discussed earlier. If your current state isn't valid, it's very common to prevent the navigation occuring by returning `false`.
+
+We can now use `TabGroup` as follows:
+
+```
+export class TabSample extends TabGroup
+{  
+    apple = new MyTabContent ("Apples are delicious")
+    banana = new MyTabContent ("But bananas are ok")
+    cantaloupe = new MyTabContent ("Cantaloupe that's what I'm talking about.")
+}
+```
+
 ## Navigation Links
 
 For convenience, `router` has a function for generating navigation links. These look like ordinary url links, but they use the `onclick` event to ensure the router's navigation method is called, rather than jumping to a new page:
@@ -854,6 +896,10 @@ The purpose of the interface is to reduce the surface area of the parent that th
 
 You may also use the `Component`'s `root()`, or `branch()` API (explained in the API section further below) to target a specific ancestor, rather than the immediate parent.
 
+It's almost always a bad idea to access a sibling component. Instead, the child should access the parent, and the parent should interact with the other child.
+
+We highly recommend you install the `circular-dependency-plugin` package, and run it as part of your build process. Keep your cyclomatic complexity low!
+
 ## Update Communication
 
 All state changes to `Component` trigger its `updated` method:
@@ -932,8 +978,15 @@ children () : Component[]
  * The entry point for a pickle app
  * @param rootComponentConstructor The parameterless constructor of the root component
  * @param containerId The element id to render the view, and local storage name
+ * @param rootComponent Optionally, an existing instance of the root component
+ * @param isVdomRendered Optionally, indicate that the vdom is already rendered
  */
-constructor (rootComponentConstructor: new () => Component, containerId: string)
+constructor (
+    rootComponentConstructor : new() => Component,
+    containerId: string,
+    rootComponent?: Component,
+    isVdomRendered = false
+)
 
 /** Root component of updates, view and serialization */
 rootComponent: Component 

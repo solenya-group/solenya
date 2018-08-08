@@ -1,6 +1,6 @@
 ﻿import { Component } from './component'
 import { HValue, a } from './html'
-import { Let } from './util'
+import { Let, equalsIgnoreCase } from './util'
 import createHistory from "history/createBrowserHistory"
 import { Action } from "history"
 import { Exclude } from "class-transformer"
@@ -49,10 +49,11 @@ export class Router
         return success
     }
 
-    private clearCurrent() {        
+    clearCurrent (recurse = false) {        
         const curChild = this.currentChildComponent
         if (curChild) {
-            curChild.router.clearCurrent()        
+            if (recurse)
+                curChild.router.clearCurrent()        
             this.currentChildName = ''
         }
     }
@@ -159,14 +160,6 @@ export class Router
         else
             throw "Only the root router can follow history"
     }
-
-    autoRouteChildren (childNames: string[]) {
-         childNames.forEach (name => {
-            const c = this.component[name]
-            c.routeName = name
-            c.router = new Router (c)
-        })
-    }
 }
 
 export function isRouted(c: Component | IRouted) : c is IRouted {
@@ -193,12 +186,6 @@ export function pathTail (path: string) : string {
     const split = splitPath (path)
     split.shift()
     return split.join ('/')
-}
-
-export function equalsIgnoreCase(a: string, b: string) {
-    if (a == b) return true
-    if (a == null || b == null) return false
-    return a.toLowerCase() == b.toLowerCase()
 }
 
 export function branch (from: Router, to: Router, fromInclusive: boolean, toInclusive: boolean) : string

@@ -1,7 +1,6 @@
 ﻿import { createVElement, VElement, VAttributes, VNode, VLifecycle, isVElement, merge } from './dom'
 import { combineLifecycles } from './lifecycle'
-import { style } from 'typestyle'
-import { NestedCSSProperties } from 'typestyle/lib/types'
+import { style, types } from 'typestyle'
 
 export interface HProps extends VAttributes, HAttributes {
     [key: string] : any
@@ -562,7 +561,7 @@ export interface HAttributes {
     srcset?: string
     start?: string
     step?: number
-    style?: string | NestedCSSProperties
+    style?: string | types.NestedCSSProperties
     summary?: string
     tabindex?: number
     target?: string

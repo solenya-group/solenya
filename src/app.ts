@@ -25,9 +25,12 @@ export class App
      * The entry point for a pickle app
      * @param rootComponentConstructor The parameterless constructor of the root component
      * @param containerId The element id to render the view, and local storage name
+     * @param rootComponent Optionally, an existing instance of the root component
+     * @param isVdomRendered Optionally, indicate that the vdom is already rendered
      */
-    constructor (rootComponentConstructor : new() => Component, containerId: string, rootComponent?: Component)
+    constructor (rootComponentConstructor : new() => Component, containerId: string, rootComponent?: Component, isVdomRendered = false)
     {               
+        this.isVdomRendered = isVdomRendered
         this.rootElement = document.getElementById (containerId)!        
 
         this.time = new TimeTravel<any> (state =>

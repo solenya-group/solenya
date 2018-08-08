@@ -4,7 +4,6 @@ import { VElement } from './dom'
 import { parseTyped, KeyValue, ensureFieldsNums } from './util'
 import { Exclude, Type } from 'class-transformer'
 
-
 export abstract class Component
 {
     /** The app associated with the component; undefined if not yet attached - use judiciously - main purpose is internal use by update method */
@@ -104,6 +103,11 @@ export abstract class Component
         return children
     }
 
+    /** Returns the names of properties that are components */
+    childrenKeys() {
+        return Object.keys (this).filter (k => this[k] instanceof Component && this[k] != this.parent)
+    }
+
     /** internal use only */
     attachInternal (app: App, parent?: Component, deserialize = false) {
         const detached = this.parent == null && this.app == null
@@ -133,24 +137,12 @@ export abstract class Component
         this.refreshQueue.push (action)
     }
 
+    /** Auto generates class-transformer's @Type decorators to properties that are components. */
     initDecorators() {
-         for (var propName of Object.keys (this))
-         {
-            const propValue = this[propName]
-            if (! (propValue instanceof Component) || propValue == this)
-                continue;
-
+         for (var propName of this.childrenKeys()) {
+            const propValue = this[propName]            
             propValue.initDecorators()            
             Type (() => propValue.constructor)(this, propName)
-                                
-            if (propValue["isSerializeMarker"])
-                this[propName] = undefined                
         }
     }
-}
-
-export function typed<T>(x: new () => T) : T | undefined {
-    var obj = new x()
-    obj["isSerializeMarker"] = true
-    return obj
 }

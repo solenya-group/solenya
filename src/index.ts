@@ -1,4 +1,4 @@
-﻿export { Component, typed } from './component'
+﻿export { Component } from './component'
 export { App } from './app'
 export { TimeTravel } from './timeTravel'
 export { Storage } from './storage'
