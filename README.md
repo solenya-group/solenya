@@ -1,22 +1,68 @@
 # Pickle?
 
-Pickle is the web framework for you if you like **conceptual simplicity**, whether you're writing small or big web apps.
+Pickle is the web framework for you if you like **conceptual simplicity**.
 
-The core of a pickle application consists of a serializable tree of objects representing application state, where any update to an object triggers a portion of that tree to be translated to a virtual DOM tree, that then patches the real DOM.
+To manage complexity in a web application, we split it into modular chunks. It's helpful to think of common types of chunks, or "components", in terms of their statefulness:
 
-Writing web applications can quickly get very complicated. This is how pickle makes it simple:
+ 1) Pure functions that return a view (i.e. a stateless virtual dom node)
+ 2) Objects with DOM state (i.e. essentially a web component)
+ 3) Objects with application state (i.e. a high level chunk of an application)
+
+Most web frameworks today focus on building components of type '1' and '2', but have a "figure it out yourself" stance when it comes to '3'. This lack of native support for type 3 components causes serious problems.
+
+The immediate strategy, which is really a lack of strategy, is to use a type '2' component, an abstraction around an HTML element, and then polute it with application logic. In code samples, and in small applications, we can get away with this dirty ad-hoc approach, but the approach doesn't scale.
+
+For this reason, many people eventually adopt the strategy of using a separate state management library. The problem here is that your type 3 component is fractured: there's the state management parts, the view parts, and then some boilerplate to connect the parts. Aside from being unpleasantly verbose, this hampers reusability.
+
+Pickle is designed for building high-level type '3' components. This means you can cleanly organise your application into meaningful, reusable, high-level chunks. So for example, you could have a component for a login, a component for a paged table, or a component for an address. And you can compose components to any scale: in fact your root component will represent your entire application.
+
+Each component's view is a pure function of its state, so within each component we get a high degree of separation of the application logic/state and the view. In fact, for any pickle application, you can strip out its views, and the core structure of the application remains in tact. Writing a component means thinking about its state and state transitions first, and its views second. This approach makes pickle components innately serializable. So another way to think about pickle components is that they represent the serializable parts of your application, that you might want to load and save from and to local storage or the server. Anyway, time to see some code.
+
+## First Code Sample
+
+Here's a counter component in pickle:
+
+```typescript
+export class Counter extends Component
+{
+    count = 0
+
+    view () {
+        return div (
+            commandButton (() => this.add (+1), "+"),
+            this.count,
+            commandButton (() => this.add (-1), "-")     
+        )
+    }
+
+    add (x: number) {
+        this.update(() => this.count += x) 
+    }
+}
+```
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fcounter.ts)
+
+In pickle, application state lives in your components — in this case `count`.
+
+Components can optionally implement a `view` method, which is a pure non side effecting function of the component's state. Views are rendered with a virtual DOM, such that the real DOM is efficiently patched with only the changes since the last update.
+
+Components update their state exclusively via the their `update` method, which will automatically refresh the view. It really is that simple. In fact, simplicity is the defining characteristic of pickle.
+
+## Comparison Table
+
+Pickle simplifies many aspects of writing a web application.
 
 | What | Simple Way | Complicated Way | Notes |
 |-|-|-|-|
+| State Management | Baked in | Separate state manager library w/ tons of boilerplate | In pickle, components represent state. They're separated from the lifecycle of your views. There's no ~~componentWillMount~~ UNSAFE_componentWillMount method.
 | Type Checking | Just use typescript | Extra testing & tooling to compensate for not using static typing. Makes refactoring horrible. | With type-inference the tax for static typing has never been so low for the benefits it gives.
 | Rendering HTML | Just use typescript. No templating language required |Yet another templating language, w/ constructs reinventing language features for looping, conditionals, etc. etc. etc. with mysterious ad-hoc rules, lacking the consistency and generality of an actual programmming language. | You don't need a templating language if your programming language is expressive. It's also inherently more complex to essentially embed a programming language in strings, rather than embed strings in a programming language.
 | CSS | Just use typescript. Style with `typestyle` | Unmanageable stylesheets, where you can't easily rename, refactor, parameterize, etc. The root of the problem is your styles are expressed in a language that's simplistic and excessively decoupled from your view. | Yes, you can still easily reference ordinary css.
-| Paradigm | Use both functional and OO | Only use the functional approach, even if it means turning walking into gymanastics. Reducers, higher-order-components, functional lensing, boilerplate | OO elegantly models state changes over time, and can complement the functional approach. 
-| Pure Functions | Use whenever possible | Constructs other than functions when pure functions suffice, with custom or hampered composability. Functions unnecessarily riddled with side-effects.
-| Update Path | One-way | Manual updating coupled with some databinding logic w/ its own update path and mysterious property rewriting magic | The virtual DOM approach has some tricky corner cases, but it's mostly a win.
-| State Management | Baked in | Separate state manager library w/ tons of boilerplate | In pickle, components represent state. They're separated from the lifecycle of your views. There's no ~~componentWillMount~~ UNSAFE_componentWillMount method.
+| Paradigm | Use both functional and OO; use pure functions rather than side-effecting functions where possible | Only use the functional approach, even if it means turning walking into gymanastics. Reducers, higher-order-components, functional lensing, boilerplate | OO elegantly models state changes over time, and can complement the functional approach. 
+| Updating the DOM | Virtual DOM | Manually manipulating the DOM | The virtual DOM approach has some tricky corner cases, but it's mostly a win.
 | Serialization | Baked in | Separate serialization library w/ bridge code to components | Time travel debugging, hot module reloading, transactions, undo/redo all use the same single mechanism.
 | Async | Call any async function, then update component state synchronously | Require special support. In some functional reactive frameworks, each component functions as an independent application, necessitating repetitive and complex inter-component wiring simply to regain the synchronicity within each view tree and state tree that should have been implicit |
+| Configuration | None | Custom file types, global configuration settings |
 
 Pickle is small: see and understand the source code for yourself. Its power comes from its simplicity, and its integration as well as intended use with many other great libraries:
 
@@ -43,9 +89,11 @@ Pickle is small: see and understand the source code for yourself. Its power come
 
 # Table of Contents
 
+- [Pickle](#pickle)
+- [First Code Sample](#first-code-sample)
+- [Comparison Table](#comparison-table)
 - [Installation](#installation)
 - [Samples](#samples)
-- [Intro to Pickle](#intro-to-pickle)
 - [State, View and Updates](#state--view-and-updates)
 - [Composition](#composition)
 - [Component Initialization](#component-initialization)
@@ -87,36 +135,6 @@ Pickle is small: see and understand the source code for yourself. Its power come
     * [App Initialization Members](#app-initialization-members)
     * [App Serialization Members](#app-serialization-members)
   
-# Intro to Pickle
-
-Let's start with a counter component:
-
-```typescript
-export class Counter extends Component
-{
-    count = 0
-
-    view () {
-        return div (
-            commandButton (() => this.add (+1), "+"),
-            this.count,
-            commandButton (() => this.add (-1), "-")     
-        )
-    }
-
-    add (x: number) {
-        this.update(() => this.count += x) 
-    }
-}
-```
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fcounter.ts)
-
-In pickle, application state lives in your components — in this case `count`.
-
-Components can optionally implement a `view` method, which is a pure non side effecting function of the component's state. Views are rendered with a virtual DOM, such that the real DOM is efficiently patched with only the changes since the last update.
-
-Components update their state exclusively via the their `update` method, which will automatically refresh the view.
-
 # State, View and Updates
 
 A pickle app outputs a virtual DOM node as a pure function of its state. On each update, the previous root virtual DOM node is compared with the new one, and the actual DOM is efficiently patched with the change. DOM events can trigger updates, which result in a view refresh, forming a cyclic relationship between the state and the view.
