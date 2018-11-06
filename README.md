@@ -1,20 +1,22 @@
 # Pickle?
 
-Pickle is the web framework for you if you like **conceptual simplicity**.
+Pickle is the web framework for you if you like **conceptual simplicity**. The heart of a pickle application is **your object model**. The pickle API lets you easily translate your object model to the DOM, the cloud, and local storage.  
+
+![pickle flow diagram](pickle-architecture.png "Pickle Flow Diagram")
 
 To manage complexity in a web application, we split it into modular chunks. It's helpful to think of common types of chunks, or "components", in terms of their statefulness:
 
- 1) Pure functions that return a view (i.e. a stateless virtual dom node)
- 2) Objects with DOM state (i.e. essentially a web component)
- 3) Objects with application state (i.e. a high level chunk of an application)
+1) Objects with application state (i.e. a high level chunk of an application).
+2) Pure functions that return a view (i.e. a stateless virtual dom node)
+3) Objects with DOM state (i.e. essentially a web component)
+ 
+Most web frameworks today focus on building components of type '2' and '3', but have a "figure it out yourself" stance when it comes to '1'. This lack of native support for type 1 components causes serious problems.
 
-Most web frameworks today focus on building components of type '1' and '2', but have a "figure it out yourself" stance when it comes to '3'. This lack of native support for type 3 components causes serious problems.
+The immediate strategy, which is really a lack of strategy, or upside-down strategy, is to use a type '3' component, an abstraction around an HTML DOM element, and then polute it with application logic. In code samples, and in small applications, we can get away with this dirty ad-hoc approach, but the approach doesn't scale.
 
-The immediate strategy, which is really a lack of strategy, is to use a type '2' component, an abstraction around an HTML element, and then polute it with application logic. In code samples, and in small applications, we can get away with this dirty ad-hoc approach, but the approach doesn't scale.
+For this reason, many people eventually adopt the strategy of using a separate state management library. The problem here is that your type 1 component is fractured: there's the state management parts, the view parts, and then some boilerplate to connect the parts. Aside from being unpleasantly verbose, this hampers reusability.
 
-For this reason, many people eventually adopt the strategy of using a separate state management library. The problem here is that your type 3 component is fractured: there's the state management parts, the view parts, and then some boilerplate to connect the parts. Aside from being unpleasantly verbose, this hampers reusability.
-
-Pickle is designed for building high-level type '3' components. This means you can cleanly organise your application into meaningful, reusable, high-level chunks. So for example, you could have a component for a login, a component for a paged table, or a component for an address. And you can compose components to any scale: in fact your root component will represent your entire application.
+Pickle is designed for building high-level type '1' components. This means you can cleanly organise your application into meaningful, reusable, high-level chunks. So for example, you could have a component for a login, a component for a paged table, or a component for an address. And you can compose components to any scale: in fact your root component will represent your entire application.
 
 Each component's view is a pure function of its state, so within each component we get a high degree of separation of the application logic/state and the view. In fact, for any pickle application, you can strip out its views, and the core structure of the application remains in tact. Writing a component means thinking about its state and state transitions first, and its views second. This approach makes pickle components innately serializable. So another way to think about pickle components is that they represent the serializable parts of your application, that you might want to load and save from and to local storage or the server. Anyway, time to see some code.
 
