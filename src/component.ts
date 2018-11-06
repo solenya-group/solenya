@@ -108,15 +108,17 @@ export abstract class Component
         return Object.keys (this).filter (k => this[k] instanceof Component && this[k] != this.parent)
     }
 
-    /** internal use only */
-    attachInternal (app: App, parent?: Component, deserialize = false) {
+    /** Attaches a component to the component tree.
+     * Called automatically on refresh but can be explicitly called to eagerly attach.
+     */
+    attach (app: App, parent?: Component, deserialize = false) {
         const detached = this.parent == null && this.app == null
         
         this.parent = parent
         this.app = app
 
         for (var child of this.children())
-            child.attachInternal (app, this, deserialize)
+            child.attach (app, this, deserialize)
        
         if (detached) {
             ensureFieldsNums (this)

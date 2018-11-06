@@ -103,7 +103,7 @@ export class App
         if (this.activeUpdates > 0)
             return
 
-        this.rootComponent.attachInternal (this, undefined, deserialize)
+        this.rootComponent.attach (this, undefined, deserialize)
       
         if (this.lock)
             return;

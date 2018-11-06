@@ -11,7 +11,8 @@
     "outDir": "./dist",
     "suppressImplicitAnyIndexErrors":true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "sourceMap": true
   },
   "include": [
     "src/**/*"

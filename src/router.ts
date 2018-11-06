@@ -40,7 +40,7 @@ export class Router
 
     /** Sets the current path, setting the history accordingly */
     async navigate (childPath: string, action?: Action) : Promise<boolean>
-    {                    
+    {          
         const success = await this.root.setChildPath (combinePaths (this.pathRootToThis (false, true), childPath), action)
         this.component.update (() => {})
         if (success)      
@@ -49,17 +49,16 @@ export class Router
         return success
     }
 
-    clearCurrent (recurse = false) {        
-        const curChild = this.currentChildComponent
-        if (curChild) {
-            if (recurse)
-                curChild.router.clearCurrent()        
-            this.currentChildName = ''
-        }
+    clearCurrent (recurse = false)
+    {        
+        if (recurse && this.currentChildComponent)
+            this.currentChildComponent.router.clearCurrent()                    
+        
+        this.currentChildName = ''
     }
     
     private async setChildPath (childPath: string, action?: Action) : Promise<boolean>
-    {         
+    {                 
         if (this.currentChildName != pathHead (childPath) || (this.currentChildName == '' && pathHead (childPath) == ''))
             if (this.component.beforeNavigate && false === await this.component.beforeNavigate (childPath, action))
                 return false
@@ -128,9 +127,9 @@ export class Router
     }
 
     navigateLink (path: string, ...values: HValue[]) : VElement {
-        return a ({
+        return a ({           
             href: Let (combinePaths (this.pathRootToThis (true, true), path), x => x.indexOf ("/") == 0 ? x : "/" + x),
-            onclick: (e:any)  => {
+            onclick: e => {
                 this.navigate (path)
                 return false
             }},
