@@ -20,7 +20,7 @@ Pickle is designed for building high-level type '1' components. This means you c
 
 Each component's view is a pure function of its state, so within each component we get a high degree of separation of the application logic/state and the view. In fact, for any pickle application, you can strip out its views, and the core structure of the application remains in tact. Writing a component means thinking about its state and state transitions first, and its views second. This approach makes pickle components innately serializable. So another way to think about pickle components is that they represent the serializable parts of your application, that you might want to load and save from and to local storage or the server. Anyway, time to see some code.
 
-## First Code Sample
+# First Code Sample
 
 Here's a counter component in pickle:
 
@@ -50,21 +50,29 @@ Components can optionally implement a `view` method, which is a pure non side ef
 
 Components update their state exclusively via the their `update` method, which will automatically refresh the view. It really is that simple. In fact, simplicity is the defining characteristic of pickle.
 
-## Comparison Table
+# Samples
+
+* Live Demos: http://pickle-ts.com/
+* Live Editable Code Samples: https://stackblitz.com/edit/pickle-samples
+* Github Samples: https://github.com/pickle-ts/pickle-samples
+
+# Comparison Table
 
 Pickle simplifies many aspects of writing a web application.
 
-| What | Simple Way | Complicated Way | Notes |
-|-|-|-|-|
-| State Management | Baked in | Separate state manager library w/ tons of boilerplate | In pickle, components represent state. They're separated from the lifecycle of your views. There's no ~~componentWillMount~~ UNSAFE_componentWillMount method.
-| Type Checking | Just use typescript | Extra testing & tooling to compensate for not using static typing. Makes refactoring horrible. | With type-inference the tax for static typing has never been so low for the benefits it gives.
-| Rendering HTML | Just use typescript. No templating language required |Yet another templating language, w/ constructs reinventing language features for looping, conditionals, etc. etc. etc. with mysterious ad-hoc rules, lacking the consistency and generality of an actual programmming language. | You don't need a templating language if your programming language is expressive. It's also inherently more complex to essentially embed a programming language in strings, rather than embed strings in a programming language.
-| CSS | Just use typescript. Style with `typestyle` | Unmanageable stylesheets, where you can't easily rename, refactor, parameterize, etc. The root of the problem is your styles are expressed in a language that's simplistic and excessively decoupled from your view. | Yes, you can still easily reference ordinary css.
-| Paradigm | Use both functional and OO; use pure functions rather than side-effecting functions where possible | Only use the functional approach, even if it means turning walking into gymanastics. Reducers, higher-order-components, functional lensing, boilerplate | OO elegantly models state changes over time, and can complement the functional approach. 
-| Updating the DOM | Virtual DOM | Manually manipulating the DOM | The virtual DOM approach has some tricky corner cases, but it's mostly a win.
-| Serialization | Baked in | Separate serialization library w/ bridge code to components | Time travel debugging, hot module reloading, transactions, undo/redo all use the same single mechanism.
-| Async | Call any async function, then update component state synchronously | Require special support. In some functional reactive frameworks, each component functions as an independent application, necessitating repetitive and complex inter-component wiring simply to regain the synchronicity within each view tree and state tree that should have been implicit |
+| What | Simple Way | Complicated Way |
+|-|-|-|
+| State Management | Intrinsic to design | Separate state manager library w/ tons of boilerplate
+| Type Checking | Just use Typescript. Implicit testing, great tooling, and eased refactoring | Extra testing & tooling to compensate for not using static typing, and painful refactoring 
+| Rendering HTML | Just use typescript. No templating language required. You don't need a templating language if your programming language is expressive | Yet another templating language, with ad-hoc constructs reinventing language features for looping, conditionals, etc. lacking the consistency and generality of an actual programmming language. The root of the problem: embedding a programming language in structureless strings is inherently more complex than embedding structureless strings in a programming language.
+| CSS | Just use typescript. Style with `typestyle`. (Yes, you can also still easily reference ordinary css.) | Unmanageable stylesheets, where you can't easily rename, refactor, parameterize, etc. The root of the problem is your styles are expressed in a language that's simplistic and excessively decoupled from your view.
+| Paradigm | Use both functional and OO, using pure functions rather than side-effecting functions where possible | Only use the functional approach, even if it means turning walking into gymanastics. Reducers, higher-order-components, functional lensing, boilerplate 
+| Updating the DOM | Output a virtual DOM tree as a pure function of your object model | Manually manipulate the DOM on a case-by-case basis
+| Serialization | Intrinsic to design. Time travel debugging, hot module reloading, transactions, undo/redo all use the same single mechanism | Separate serialization library w/ bridge code to components
+| Async | Call any async function, then update component state synchronously | Either force synchronous actions where asynchronous actions are required, or force asynchronous actions when synchronous actions suffice (the latter is characteristic of functional reactive programming frameworks). |
 | Configuration | None | Custom file types, global configuration settings |
+
+# Integration with Existing Libraries
 
 Pickle is small: see and understand the source code for yourself. Its power comes from its simplicity, and its integration as well as intended use with many other great libraries:
 
@@ -83,19 +91,14 @@ Pickle is small: see and understand the source code for yourself. Its power come
 
 `npm install pickle-ts`
 
-# Samples
-
-* Live Demos: http://pickle-ts.com/
-* Live Editable Code Samples: https://stackblitz.com/@pickle-ts
-* Github Samples: https://github.com/pickle-ts/pickle-samples
-
 # Table of Contents
 
 - [Pickle](#pickle)
 - [First Code Sample](#first-code-sample)
-- [Comparison Table](#comparison-table)
-- [Installation](#installation)
 - [Samples](#samples)
+- [Comparison Table](#comparison-table)
+- [Integration with Existing Libraries](#integration-with-existing-libraries)
+- [Installation](#installation)
 - [State, View and Updates](#state--view-and-updates)
 - [Composition](#composition)
 - [Component Initialization](#component-initialization)
@@ -970,6 +973,11 @@ onRefreshed (action: () => void)
 ```typescript
 /** Called after construction, with a flag indicating if deserialization occured */
 attached (deserialized: boolean) 
+
+/** Attaches a component to the component tree.
+ * Called automatically on refresh but can be explicitly called to eagerly attach.
+ */
+attach (app: App, parent?: Component)
 ```
 ### Component Update Members
 
