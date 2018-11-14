@@ -731,10 +731,6 @@ export class Samples extends Component implements IRouted
         }
         ...
     }
-
-    childRoute (name: string) {        
-        return this[name]
-    }
 }
 ```
 A component can be routed by implementing `IRouted`. A routed component defines a `routeName` property that corresponds to a *name* in a *path*.
@@ -743,7 +739,7 @@ So for the path `/tabSample/banana`, there's a component with the `tabSample` `r
 
 A *current route* is represented with a component route's `currentChildName` value. So the `currentChildName` of the `Samples` component's router is `tabSamples`, and the `curentChildName` of the `TabSample` component's router is `banana`. Finally, the `currentChildName` of the `banana` component's router is simply ``, since it's a leaf node, i.e. itself has no children.
 
-The `childRoute` method is used by a parent router to map a name to child name. In this case, we use a straightforward mapping based on the property name of the child component.
+By default, the mapping from parent and child name to child component occurs by scanning the parent for children and returning one that has a `routeName` that (case insensitively) matches the name provided. For complete control, you could implement the `childRoute` method to customize that default behaviour.
 
 ## Navigation
 
@@ -823,10 +819,6 @@ export abstract class TabGroup extends Component implements IRouted
             this[k].routeName = k
         }
     } 
-
-    childRoute (name: string) {
-        return this[name]
-    }
 
     async beforeNavigate (childPath: string) {
         const kids = this.childrenKeys()
