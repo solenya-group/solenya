@@ -88,9 +88,11 @@ export abstract class Component
         return branch
     }
 
-    /** Returns the properties that are components, flattening out array properties of components */
+    /** Returns the properties that are components, appended with flattened out array properties of components. */
     children() {
         const children: Component[] = []
+        const childrenFromArrayProperties: Component[] = []
+
         for (var key of Object.keys(this)) {
             var child = this[key]
             if (child != this.parent && child instanceof Component)
@@ -98,9 +100,9 @@ export abstract class Component
             else if (child instanceof Array)
                 for (var aChild of child)
                     if (aChild != this.parent && aChild instanceof Component)
-                        children.push (aChild)                                                
+                        childrenFromArrayProperties.push (aChild)                                                
         }
-        return children
+        return children.concat (childrenFromArrayProperties)
     }
 
     /** Returns the names of properties that are components */

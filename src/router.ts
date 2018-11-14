@@ -1,6 +1,6 @@
 ﻿import { Component } from './component'
 import { HValue, a } from './html'
-import { Let, equalsIgnoreCase } from './util'
+import { Let, equalsIgnoreCase, isNullOrEmpty } from './util'
 import createHistory from "history/createBrowserHistory"
 import { Action } from "history"
 import { Exclude } from "class-transformer"
@@ -28,7 +28,8 @@ export interface IRouted extends Component
 export class Router
 {   
     /** The current child route name; an empty string if no child route is selected */
-    currentChildName = ""    
+    currentChildName = ""
+    query = ""
 
     @Exclude()
     component: IRouted
@@ -40,12 +41,16 @@ export class Router
 
     /** Sets the current path, setting the history accordingly */
     async navigate (childPath: string, action?: Action) : Promise<boolean>
-    {          
+    {                    
+        const query = childPath.indexOf ("?") == -1 ? "" : childPath.substring (childPath.indexOf("?"))
+
         const success = await this.root.setChildPath (combinePaths (this.pathRootToThis (false, true), childPath), action)
-        this.component.update (() => {})
-        if (success)      
-            this.setHistory (action)            
         
+        this.component.update (() => {})
+        if (success) {    
+            this.query = query
+            this.setHistory (action)            
+        }
         return success
     }
 
@@ -58,14 +63,15 @@ export class Router
     }
     
     private async setChildPath (childPath: string, action?: Action) : Promise<boolean>
-    {                 
+    {         
         if (this.currentChildName != pathHead (childPath) || (this.currentChildName == '' && pathHead (childPath) == ''))
             if (this.component.beforeNavigate && false === await this.component.beforeNavigate (childPath, action))
                 return false
 
         this.clearCurrent()
 
-        const newChild = ! this.component.childRoute ? undefined : this.component.childRoute (pathHead (childPath))            
+        const newChild = this.findChildRoute(pathHead (childPath))      
+
         let success = true
                 
         if (newChild) {
@@ -85,9 +91,7 @@ export class Router
 
     /** The current child component of this route */
     get currentChildComponent(): IRouted | undefined {
-        return this.currentChildName == "" || ! this.component.childRoute ?
-            undefined :
-            this.component.childRoute (this.currentChildName)                
+        return this.findChildRoute (this.currentChildName)
     }
 
     pathFull() {        
@@ -127,9 +131,9 @@ export class Router
     }
 
     navigateLink (path: string, ...values: HValue[]) : VElement {
-        return a ({           
+        return a ({
             href: Let (combinePaths (this.pathRootToThis (true, true), path), x => x.indexOf ("/") == 0 ? x : "/" + x),
-            onclick: e => {
+            onclick: (e:any)  => {
                 this.navigate (path)
                 return false
             }},
@@ -138,14 +142,14 @@ export class Router
     } 
 
     protected setHistory (action?: Action) {
-        const path = combinePaths ( "/" + this.pathFull()) // hack
-        if (location.pathname != path) {            
-            if (action == 'REPLACE' || equalsIgnoreCase (location.pathname, path))
-                  history.replace (path)
+        const pathAndQuery = combinePaths ("/" + this.pathFull()) + this.query
+        if (location.pathname != pathAndQuery) {            
+            if (action == 'REPLACE' || equalsIgnoreCase (location.pathname + location.search, pathAndQuery))
+                  history.replace (pathAndQuery)
             else if (action == 'POP')
                 history.goBack()
             else
-                history.push (path)
+                history.push (pathAndQuery)
         }
     }
     
@@ -158,6 +162,17 @@ export class Router
             })
         else
             throw "Only the root router can follow history"
+    }
+
+    findChildRoute (name: string) {
+        if (isNullOrEmpty (name))
+            return undefined
+        
+        if (this.component.childRoute)
+            return this.component.childRoute (name)
+
+        const route = this.component.children().filter(x => isRouted(x) && equalsIgnoreCase (x.routeName, name))
+        return ! route.length ? undefined : route[0] as IRouted
     }
 }
 
