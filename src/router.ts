@@ -40,17 +40,21 @@ export class Router
     }
 
     /** Sets the current path, setting the history accordingly */
-    async navigate (childPath: string, action?: Action) : Promise<boolean>
-    {                    
-        const query = childPath.indexOf ("?") == -1 ? "" : childPath.substring (childPath.indexOf("?"))
-
+    async navigate (childPath: string, action?: Action, updateHistory = true) : Promise<boolean>
+    {                            
+        if (combinePaths ("/", childPath) == this.pathFull())
+            return true
+                
         const success = await this.root.setChildPath (combinePaths (this.pathRootToThis (false, true), childPath), action)
         
         this.component.update (() => {})
+        
         if (success) {    
-            this.query = query
-            this.setHistory (action)            
+            this.leaf.query = childPath.indexOf ("?") == -1 ? "" : childPath.substring (childPath.indexOf("?"))
+            if (updateHistory)
+                this.setHistory (action)            
         }
+        
         return success
     }
 
@@ -95,7 +99,7 @@ export class Router
     }
 
     pathFull() {        
-        return branch (this.root, this.leaf, true, true)
+        return combinePaths ("/", branch (this.root, this.leaf, true, true)) + this.leaf.query
     }
    
     /** Returns the path from the root to this */
@@ -142,8 +146,8 @@ export class Router
     } 
 
     protected setHistory (action?: Action) {
-        const pathAndQuery = combinePaths ("/" + this.pathFull()) + this.query
-        if (location.pathname != pathAndQuery) {            
+        const pathAndQuery = this.pathFull()
+        if (location.pathname + location.search != pathAndQuery) {            
             if (action == 'REPLACE' || equalsIgnoreCase (location.pathname + location.search, pathAndQuery))
                   history.replace (pathAndQuery)
             else if (action == 'POP')
@@ -158,7 +162,7 @@ export class Router
             history.listen (async (historyLocation, action) => {
                 const rootPath = "/" + this.component.routeName
                 if (location.pathname.indexOf (rootPath) == 0)
-                    this.navigate (location.pathname.substr (rootPath.length), action)                
+                    this.navigate (location.pathname.substr (rootPath.length) + location.search, action, false)                
             })
         else
             throw "Only the root router can follow history"
@@ -185,7 +189,9 @@ export function combinePaths (...pathParts: string[]) {
 }
 
 export function splitPath (path: string) {
-     return path.split('/').filter(s => s != '')
+    if (path && path.indexOf ("?") != -1)
+        path = path.substring (0, path.indexOf ("?"))
+    return path.split('/').filter(s => s != '')
 }
 
 export function normalizePath (path: string): string {
