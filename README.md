@@ -123,7 +123,7 @@ Pickle is small: see and understand the source code for yourself. Its power come
   * [Important Gotcha](#important-gotcha)
 - [Routing](#routing)
   - [Navigation](#navigation)
-  - [Browser History](#browser-history)
+  - [Initialisation and Browser History](#initialisation-and-browser-history)
   - [Navigation Links](#navigation-links)
 - [Child-To-Parent Communication](#child-to-parent-communication)
   * [Callback Communication](#callback-communication)
@@ -759,29 +759,27 @@ this.router.parent.navigate ('banana')
 this.router.root.navigate ('tabSample/banana')
 ```
 
-## Browser History
+## Initialisation and Browser History
 
-Navigation will trigger a change to the browser's history. Reciprocally, we want a change to the browser's history to trigger a call to the `navigate` method of the root component's router. We set this up by calling `followHistory` on the root router. This enables the back button to trigger a navigation.
+Your first navigation typically occurs in the `attached` method of your root component. For example:
     
 ```
-export class Samples extends Component implements IRouted
-{
-    attached()
-    {
+export class Samples extends Component implements IRouted {
+    attached() {
         ...
-
-        this.router.navigate (location.pathname != "/" ?
-            location.pathname :
-            key (() => this.counter))
-
-        this.router.followHistory()     
+        this.router.navigate (location.pathname)
     }
     ...
 }
 ```
-In this case, if the path is `/` we map it to the `counter` component.
+The initial call to `navigate` on your root router is special in terms of navigation events:
 
-The router internally uses the `history` api to respond to browser navigation events.
+* History tracking begins
+  * This means from then on, actions such as the back and forward button on the browser will trigger navigation events.
+  * (The router internally uses the `history` api to update the browser history and to respond to browser navigation events.)
+* Navigation callbacks always run
+  * The `beforeNavigate` and `navigated` callbacks on your component, if present, will be called even if the current url is identical to the url navigated to.
+  * This is because before the initial navigation, it shouldn't be assumed that the application state reflects the current url.
 
 ## Intercepting Navigation
 

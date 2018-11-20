@@ -31,8 +31,8 @@ export class Router
     currentChildName = ""
     query = ""
 
-    @Exclude()
-    component: IRouted
+    @Exclude() component: IRouted
+    @Exclude() rootBegan?: boolean
 
     constructor (component: IRouted)
     {
@@ -40,20 +40,31 @@ export class Router
     }
 
     /** Sets the current path, setting the history accordingly */
-    async navigate (childPath: string, action?: Action, updateHistory = true) : Promise<boolean>
-    {                            
-        if (combinePaths ("/", childPath) == this.pathFull())
+    async navigate (childPath: string, action?: Action, bypassHistoryUpdate = false) : Promise<boolean>
+    {              
+        const isFirstEverRootNav = this.root == this && ! this.rootBegan
+
+        if (! isFirstEverRootNav && combinePaths ("/", childPath) == this.pathFull())
             return true
+
+        if (this.root == this)
+            this.rootBegan = true
                 
-        const success = await this.root.setChildPath (combinePaths (this.pathRootToThis (false, true), childPath), action)
+        const success = await this.root.setChildPath (
+            combinePaths (this.pathRootToThis (false, true), childPath),
+            action
+        )
         
         this.component.update (() => {})
         
         if (success) {    
             this.leaf.query = childPath.indexOf ("?") == -1 ? "" : childPath.substring (childPath.indexOf("?"))
-            if (updateHistory)
+            if (! bypassHistoryUpdate)
                 this.setHistory (action)            
         }
+
+        if (isFirstEverRootNav)
+            this.followHistory()
         
         return success
     }
@@ -157,12 +168,12 @@ export class Router
         }
     }
     
-    followHistory () {    
+    private followHistory () {    
         if (! this.parent)
             history.listen (async (historyLocation, action) => {
                 const rootPath = "/" + this.component.routeName
                 if (location.pathname.indexOf (rootPath) == 0)
-                    this.navigate (location.pathname.substr (rootPath.length) + location.search, action, false)                
+                    this.navigate (location.pathname.substr (rootPath.length) + location.search, action, true)
             })
         else
             throw "Only the root router can follow history"
