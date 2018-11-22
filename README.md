@@ -461,10 +461,10 @@ When your application state is serialized, an ordinary page refresh will run you
 ```
 module.hot.accept('../app/samples', () => {
     var latest = require ('../app/samples')
-    window["app"] = new App (latest.Samples.prototype.constructor, "app", undefined, true)
+    window["app"] = new App (latest.Samples.prototype.constructor, "app", {isVdomRendered: true})
 })
 ```
-The `true` parameter tells the new app instance that there's already a rendered tree, so do a patch rather than create the DOM from scratch.
+The `isVdomRendered` parameter tells the new app instance that there's already a rendered tree, so do a patch rather than create the DOM from scratch.
 
 # Async
 
@@ -482,7 +482,9 @@ Pickle's update path is synchronous, so you perform aynchronous activites outsid
 
 Notice that the `update` occurs *after* the asynchronous operation has completed.
 
-Note that the samples demonstrate calling github's search, with debouncing.
+Both the `Validator` and `Router`, covered in their own sections, are designed to operate asynchronously.
+
+The samples demonstrate calling github's search, with debouncing.
 
 # Forms
 
