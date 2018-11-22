@@ -356,14 +356,12 @@ import { App } from 'pickle-ts'
 
 var app = new App (Counter, "app")
 ```
-
-You can also construct the application from an explicit instance. This can be useful when you've deserialized the component from somewhere else, such as a server:
+You can also construct the application from an explicit instance. This can be useful when you've deserialized the component from somewhere else, such as a server. 
 
 ```typescript
-var app = new App (Counter, "app", counterFromTheWeb)
+var app = new App (Counter, "app", {rootComponent: counterFromTheWeb })
 ```
-
-You can access the app's `time` property to perform time travel.
+Make sure you've read the serialization section to ensure your component deserializes correctly.
 
 # Time Travel
 
@@ -395,7 +393,7 @@ When time travel is on, pickle serializes the component tree on each update. It'
 
 # Serialization
 
-It's useful to be able to serialize your application to local storage. This means users can refresh without losing their data, which is also great during development.
+Sometimes you want to serialize your application to local storage. 
 
 To save our application with each update, we set the app `autosave` property on the app's `storage` object to `true`:
 
@@ -412,33 +410,37 @@ app.storage.clear()
 
 ## Property Serialization
 
-It's critical to be aware that **Typescript transpiles away property types** (unlike in C# or Java). This means there's a handful of rules you need to follow to ensure property serialization works perfectly. This component shows the possibilities you need to be aware of:
+It's critical to be aware that **Typescript transpiles away property types** (unlike in C# or Java). The `@Type` decorator of the `class-transformer` serialization package can be used to ensure nested components deserialize with the correct types:
 
 ```typescript
-import { Type } from 'class-transformer'
-
-class Person extends Component {
-   name: string   
-   isMale = false
-   @Num() age = NaN
-   myItem = new Item()
-   @Type (() => Item) mySometimesUndefinedItem?: Item   
-   @Type (() => Item) myList: Item[] = []
-   ...
+export class Composition extends Component
+{
+    @Type (() => Counter) counter1: Counter
+    @Type (() => Counter) counter2: Counter
 }
 ```
-Here's the rules:
+As a shortcut, you can also call `initDecorators` in your constructor. This will automatically add `@Type` decorators by scanning for non-undefined instance properties (and do so recursively):
 
-* If on deserialization an undefined value is encountered, and its non-undefined type needs to be guessed, that type will be `string`.
-* Initialize numbers with `NaN` and decorate with `Num()`. Do **not** use `undefined` or `null` for representing serializable numbers.
-* Initialize booleans with concrete values. Do **not** use `undefined` or `null` for representing serializable booleans.
-* For fields that are classes, use the `@Type` decorator from the `class-transformer` library. If you don't, your fields will come back as json objects upon deserialization.
-* For fields that are arrays of classes, use the `@Type` decorator, and do **not** include the `[]`
+```typescript
+export class Composition extends Component
+{
+    counter1 = new Counter ()
+    counter2 = new Counter ()
 
-Pickle also has some default behaviour to make your life easier. When your app starts, pickle will scan your component tree, and automatically add the `@Type` decorator to non-undefined fields of type component. If you're deserializing a component type not already in your component tree, you can also trigger this scan by calling `initDecorators` in your component's constructor.
+    constructor() {
+        super()
+        this.initDecorators()
+    }
+}
+```
+You must always apply the `@Type` annotation to arrays of components (do **not** include the `[]`):
 
-Pickle uses the `class-transformer` npm package to serialize and deserialize your component classes. 
-
+```typescript
+export class ItemList extends Component
+{
+   @Type (() => Item) myList: Item[] = []   
+}
+```
 ## Circular references
 
 Avoid circular references unless you absolutely need them. Firstly, the serializer doesn't handle them, and secondly, it increases your cyclomatic complexity which is why some languages like F# deliberately force you to minimize them. However, occassionaly you'll need them. To do so:
@@ -487,7 +489,9 @@ Note that the samples demonstrate calling github's search, with debouncing.
 To make writing forms easier, pickle provides some widget functions for common inputs. You can easily build your own ones by examining the widgets source code.
 
 * `slider` : returns an input for selecting a numeric range
-* `inputText` : returns an input for strings or numbers, depending on field type bound to
+* `inputText` : returns an input for strings or numbers, depending on field type bound to.
+  * Initialise numeric fields with `NaN`, **not** undefined, so the input knows its dealing with numbers.
+  * Use the `@Num` decorator on the field if you intend to deserialize the object containing that field. This will make sure that on `attached`, those field values with `undefined` or `null` values will be turned backed to `NaN`.
 * `inputValue` : returns an input for strings, with to/from conversion hooks
 * `selector` : returns a select containing a list of options
 * `radioGroup` : returns a list of radio inputs

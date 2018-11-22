@@ -82,3 +82,11 @@ export function ensureFieldsNums (obj: object) {
             obj[x] = n == null ? NaN : parseFloat (n)
         }
 }
+
+export function IsSystemProperty() {
+    return Reflect.metadata("isSystemProperty", true);
+}
+
+export function isSystemProperty(target: any, propertyKey: string) {
+    return Reflect.getMetadata("isSystemProperty", target, propertyKey);
+}

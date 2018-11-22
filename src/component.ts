@@ -1,18 +1,18 @@
 ﻿import { App } from './app';
 import { div } from './html'
 import { VElement } from './dom'
-import { parseTyped, KeyValue, ensureFieldsNums } from './util'
+import { parseTyped, KeyValue, ensureFieldsNums, IsSystemProperty, isSystemProperty } from './util'
 import { Exclude, Type } from 'class-transformer'
 
 export abstract class Component
 {
     /** The app associated with the component; undefined if not yet attached - use judiciously - main purpose is internal use by update method */
-    @Exclude() app?: App
+    @IsSystemProperty() @Exclude() app?: App
 
     /** The parent component; undefined if the root component - use judiciously - main purpose is internal use by update method */
-    @Exclude() parent?: Component   
+    @IsSystemProperty() @Exclude() parent?: Component   
 
-    @Exclude() private refreshQueue: Function[] = []
+    @IsSystemProperty() @Exclude() private refreshQueue: Function[] = []
 
     /** Called after construction, with a flag indicating if deserialization occured */
     attached (deserialized: boolean) {}
@@ -99,7 +99,7 @@ export abstract class Component
                 children.push (child)
             else if (child instanceof Array)
                 for (var aChild of child)
-                    if (aChild != this.parent && aChild instanceof Component)
+                    if (aChild != this.parent && aChild instanceof Component) 
                         childrenFromArrayProperties.push (aChild)                                                
         }
         return children.concat (childrenFromArrayProperties)
@@ -148,5 +148,10 @@ export abstract class Component
             propValue.initDecorators()            
             Type (() => propValue.constructor)(this, propName)
         }
+    }
+
+    /** Returns properties not marked with the `isSystemProperty()` decorator. */
+    properties() {
+        return Object.keys (this).filter(k => ! isSystemProperty (this, k))
     }
 }

@@ -1,8 +1,13 @@
 ﻿import { TimeTravel } from './timeTravel'
 import { Storage } from './storage'
 import { Component } from './component'
-import { patch, VElement } from './dom'
-import { serialize, deserialize, plainToClass, classToPlain} from 'class-transformer'
+import { patch } from './dom'
+import { serialize, deserialize, plainToClass, classToPlain, ClassTransformOptions } from 'class-transformer'
+
+export type AppOptions = {
+    rootComponent?: Component,
+    isVdomRendered?: boolean
+}
 
 export class App 
 {   
@@ -28,26 +33,32 @@ export class App
      * @param rootComponent Optionally, an existing instance of the root component
      * @param isVdomRendered Optionally, indicate that the vdom is already rendered
      */
-    constructor (rootComponentConstructor : new() => Component, containerId: string, rootComponent?: Component, isVdomRendered = false)
+    constructor (rootComponentConstructor : new() => Component, containerId: string, options: AppOptions = {})
     {               
-        this.isVdomRendered = isVdomRendered
+        this.isVdomRendered = options.isVdomRendered == true
         this.rootElement = document.getElementById (containerId)!        
 
         this.time = new TimeTravel<any> (state =>
             this.setRootComponent (
-                <Component><any> plainToClass(rootComponentConstructor, state, {enableCircularCheck:true}), true, false, false 
+                <Component><any> plainToClass(rootComponentConstructor, state, this.serializerOptions), true, false, false 
             )
         )
 
-        var newRoot = (rootComponent || new rootComponentConstructor())
+        // We need to create a root component early (even if we don't use the instance), to run initDecorators,
+        // initDecorators automatically create @Type decorators. These type decorators must be created before deserialization occurs
+        var newRoot = (options.rootComponent || new rootComponentConstructor())
         newRoot.initDecorators()
 
         this.storage = new Storage
         (
             containerId,
-            () => serialize (this.rootComponent),
+            () => serialize (this.rootComponent, this.serializerOptions),
             serialized => {                                
-                this.setRootComponent (<Component> deserialize (rootComponentConstructor, serialized), true, false)
+                this.setRootComponent (<Component>
+                    deserialize (rootComponentConstructor, serialized, this.serializerOptions),
+                    true,
+                    false
+                )
             }
         )
 
@@ -91,10 +102,13 @@ export class App
         
         var json: Object
         if (doTimeSnapshot || (this.timeTravelOn && doTimeSnapshot !== false)) {
-            json = classToPlain (this.rootComponent)
+            json = classToPlain (this.rootComponent, this.serializerOptions)
             this.time.push (json)
         }
-        this.storage.save (doSave, () => json != null ? serialize (json) : serialize (this.rootComponent))        
+        this.storage.save (doSave, () => json != null ?
+            serialize (json, this.serializerOptions) :
+            serialize (this.rootComponent, this.serializerOptions)
+        )        
     }
 
     /** internal use only */
@@ -127,5 +141,9 @@ export class App
             
             this.rootComponent.runRefreshesInternal()
         })
+    }
+
+    serializerOptions: ClassTransformOptions = {
+        enableCircularCheck: true
     }
 }
