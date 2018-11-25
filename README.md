@@ -31,9 +31,8 @@ export class Counter extends Component
 
     view () {
         return div (
-            commandButton (() => this.add (+1), "+"),
-            this.count,
-            commandButton (() => this.add (-1), "-")     
+            button ({ onclick: () => this.add (1) }, "+"),
+            this.count
         )
     }
 
@@ -311,7 +310,7 @@ export class AnimateListExample extends Component
 
     view () {        
         return div(
-            myButton (() => this.shuffle (), "shuffle"),       
+            myButton ({ onclick: () => this.shuffle () }, "shuffle"),       
             ul (slideChildren(), this.items.map (n => li ({ key: n }, n)))
         )
     }
@@ -490,13 +489,14 @@ The samples demonstrate calling github's search, with debouncing.
 
 To make writing forms easier, pickle provides some widget functions for common inputs. You can easily build your own ones by examining the widgets source code.
 
-* `slider` : returns an input for selecting a numeric range
-* `inputText` : returns an input for strings or numbers, depending on field type bound to.
-  * Initialise numeric fields with `NaN`, **not** undefined, so the input knows its dealing with numbers.
-  * Use the `@Num` decorator on the field if you intend to deserialize the object containing that field. This will make sure that on `attached`, those field values with `undefined` or `null` values will be turned backed to `NaN`.
-* `inputValue` : returns an input for strings, with to/from conversion hooks
-* `selector` : returns a select containing a list of options
-* `radioGroup` : returns a list of radio inputs
+* `inputText` : text input
+* `inputNumber` : numeric input
+* `inputValue` : restricted input - use to make custom inputs such as `percentInput` or `currencyInput`
+* `inputTextArea` : text area input
+* `inputRange` : numeric range input
+* `selector` : select input
+* `radioGroup` : group of labelled radio buttons
+* `checkbox` : labelled checkbox
 
 In this example, we write a BMI component with two sliders:
 
@@ -510,16 +510,16 @@ export class BMI extends Component
         return this.weight / (this.height * this.height / 10000)
     }
 
-    view () {       
+    view () : VElement {       
         return div (             
             div (
                 "height",
-                slider (() => this.height, 100, 250, 1, e => this.updateProperty (e)),
+                inputRange (this, () => this.height, {}, {min:100, max: 250, step: 1}),
                 this.height
             ),
             div (
                 "weight",
-                slider (() => this.weight, 30, 150, 1, e => this.updateProperty (e)),
+                inputRange (this, () => this.weight, {}, {min:30, max:150, step:1}),
                 this.weight
             ),
             div ("bmi: " + this.calc())
@@ -529,7 +529,7 @@ export class BMI extends Component
 ```
 [Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fbmi.ts)
 
-`Component` has a `updateProperty` method that a `KeyValue` argument, that sets a property on the component, then calls component's `update` for you. All the widget functions take a callback that will plug straight into `updateProperty`. This gives you explicit control over the execution path. You can however write your own higher-level widgets that automatically call `updateProperty` for you.
+All inputs are databound, with the first two arguments the component and the field on that component to bind to.
 
 ## Validation
 
@@ -542,9 +542,9 @@ export class ValidationSample extends MyForm implements IValidated
 {     
     @Exclude() validator: Validator = new Validator (this)
     
-    @MinLength(3) @MaxLength(10) @IsNotEmpty()  username = ""
-    @Num() @Min(0) @Max(10)                     rating = NaN
-    @Num() @IsNumber()                          bonus = NaN
+    @MinLength(3) @MaxLength(10) @IsNotEmpty()  username?: string
+    @Min(0) @Max(10)                            rating? number
+    @IsNumber()                                 bonus? number
 
     ok() {
         this.validator.validateThenUpdate()
@@ -557,11 +557,11 @@ export class ValidationSample extends MyForm implements IValidated
 
     view () : VElement {           
         return div (  
-            superInput (myInput, this, () => this.username, "Username"),
-            superInput (myInput, this, () => this.rating, "Rating"),
-            superInput (inputCurrency, this, () => this.bonus, "Bonus"),
+            superInput (this, myInputText, () => this.username,
+            superInput (this, myInput, () => this.rating,
+            superInput (this, inputCurrency, () => this.bonus),
             div (
-                myButton(() => this.ok(), "ok")
+                myButton ({ onclick: () => this.ok() }, "ok")
             )
         )       
     }
@@ -643,7 +643,7 @@ div ({id: 1, class:"foo"})
 Event handlers are specified as simply a name followed by the handler:
 ```
 button (
-    { onclick : () => this.add (1) }, "+"
+    { onclick: () => this.add (1) }, "+"
 )
 ```
 

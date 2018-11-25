@@ -2,6 +2,7 @@ import { Component } from "./component"
 import { key } from "./util"
 import { ValidationError, validateSync } from "class-validator"
 import { Exclude } from "class-transformer"
+import { getPropertyKey, PropertyRef } from "./widgets";
 
 export interface IValidated
 {
@@ -61,11 +62,11 @@ export class Validator
         return false
     }
 
-    validationError (prop: () => any) {
+    validationError<T> (prop: PropertyRef<T>) {
         if (! this.validationErrors)
             return undefined
         
-        const error = this.validationErrors.filter (e => e.property == key(prop))
+        const error = this.validationErrors.filter (e => e.property == getPropertyKey(prop))
         return error.length == 0 ? undefined : error[0]
     }
 }

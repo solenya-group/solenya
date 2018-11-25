@@ -1,84 +1,107 @@
 import { VElement, VAttributes } from './dom'
-import { HValue, button, input, select, option, div, label, span, br, a } from './html'
-import { KeyValue, key, PropertyName, propertyName, Let, fuzzyEquals, guessPrimitiveType } from './util'
+import { HValue, button, input, select, option, div, label, span, br, a, HProps, textarea } from './html'
+import { key, Let, fuzzyEquals, parseFloatDeNaN, getLabel, humanizeIdentifier } from './util'
+import { Component } from './component'
 
-export function commandButton(click: () => void, ...values: HValue[]) { 
-    return button (
-        {
-            onclick: (e: Event) => click()
+export type PropertyRef<T> = string | (() => T)
+
+export type BasicBindableType = string | number | undefined
+
+export function commandLink (...values: HValue[]) {
+    return a ({ href: "javascript:;"}, ...values)
+}
+
+export type InputValueProps<T> =
+{
+    inputStringToModel : (inputString: string, prevModel: T) => T,
+    modelToInputString : (model: T, prevInputString: string) => string,
+}
+
+export const getPropertyKey = <T> (prop: PropertyRef<T>) =>
+    typeof (prop) == "string" ? prop: key (prop)
+
+export const getPropertyValue = <T> (component: Component, prop: PropertyRef<T>) =>
+    component [getPropertyKey (prop)]
+
+export const setPropertyValue = <T> (component: Component, prop: PropertyRef<T>, value: T) =>
+{    
+    const key = getPropertyKey (prop)
+    component.update (() =>
+        {            
+            component [key] = value
         },
-        ...values
+        {key: key, value: value}
     )
 }
 
-export function commandLink(click: () => void, ...values: HValue[]) {
-    return a (
-        {
-            onclick: (e: Event) => click(),
-            href: "javascript:;"
-        },
-        ...values
-    )
+export const typeify = <T extends BasicBindableType> (guideValue: any, strValue: string) =>
+    <T><any> (typeof(guideValue) == "number" ? parseFloatDeNaN (strValue) : strValue)
+
+export const getFriendlyName = <T>(obj: any, prop: PropertyRef<T>) => {
+    const k = getPropertyKey (prop)
+    return getLabel (obj, k) || humanizeIdentifier (k)
 }
 
-export function inputValue<T>
+export function inputValue<T extends BasicBindableType>
 (
-    propertyAccess: () => any,
-    inputAction: (propertyChange: KeyValue) => any,
-    inputStringToValue : (s: string, prevValue: T) => T,
-    valueToInputString : (value: T, prevInputString: string) => string,
+    component: Component,
+    prop: PropertyRef<T>,    
+    props: InputValueProps<T>,    
     ...values: HValue[]
 )
 {    
-    var handler = handlePropertyChange(propertyAccess, e =>
-        inputAction (
+    return input (
         {
-            key : e.key,
-            value : "" + inputStringToValue (e.value || "", propertyAccess())
-        }))
-
-    return input(
-        {
-            value: valueToInputString (propertyAccess(), ""),
-            oninput: handler,
-            onchange: handler,
-            onUpdated: (el: HTMLInputElement) => el.value = valueToInputString (propertyAccess(), el.value)
+            value: props.modelToInputString (getPropertyValue (component, prop), ""),
+            oninput: e =>
+                setPropertyValue (component, prop, 
+                    props.inputStringToModel (
+                        (<HTMLInputElement>e.target).value,
+                        getPropertyValue (component, prop)
+                    )
+            ),
+            onUpdated: (el: HTMLInputElement) =>
+                el.value = props.modelToInputString (getPropertyValue (component, prop), el.value)
         },
         ...values
     )  
 }
 
-export function inputText (propertyAccess: () => any, inputAction: (propertyChange: KeyValue) => any, ...values: HValue[])
+/** Currently empty but here for future proofing */
+export type InputProps = {}
+
+export function inputText (component: Component, prop: PropertyRef<string|undefined>, options: InputProps, ...values: HValue[])
 {
-    if (guessPrimitiveType (propertyAccess()) == "number")
-        return inputNumber(propertyAccess, inputAction, ...values)
-            
-    return inputValue<string>(
-        propertyAccess,
-        inputAction,        
-        s => s,
-        (s, prevS) => s || "",
+    return inputValue<string|undefined>(
+        component,
+        prop,
+        {
+            inputStringToModel: s => s,
+            modelToInputString: (s, prevS) => s || "",
+        },        
         ...values
     )
 }
 
-function inputNumber (propertyAccess: () => any, inputAction: (propertyChange: KeyValue) => any, ...values: HValue[])
+export function inputNumber (component: Component, prop: PropertyRef<number|undefined>, options: InputProps, ...values: HValue[])
 {
-    return inputValue<number>(
-        propertyAccess,
-        inputAction,        
-        inputStringToNumber,
-        numberToInputString,
+    return inputValue<number|undefined>(
+        component,
+        prop,
+        {
+            inputStringToModel: inputStringToNumber,
+            modelToInputString: numberToInputString
+        },
         ...values
     )
 }
 
-export function inputStringToNumber (s: string, prevNumber: number) : number { 
-    return parseFloat (s)
+export function inputStringToNumber (s: string, prevNumber: number|undefined) : number|undefined { 
+    return parseFloatDeNaN (s)
 }
 
-export function numberToInputString (n: number, prevInputString: string) : string {
-    if ("" + n == "NaN") {
+export function numberToInputString (n: number|undefined, prevInputString: string) : string {
+    if ("" + n == "NaN" || n == null) {
         if (new RegExp ("^[+-.]$").test (prevInputString))
             return prevInputString
         return ""
@@ -88,85 +111,178 @@ export function numberToInputString (n: number, prevInputString: string) : strin
     return "" + n
 }
 
-export function handlePropertyChange (propertyAccess: () => any, action: (propertyChange: KeyValue) => void) {
-    return (e: Event) => action({
-        key : key (propertyAccess),
-        value: (<HTMLInputElement|HTMLSelectElement>e.target).value
-    })
+/** Currently empty but here for future proofing */
+export type InputRangeProps = {
 }
 
-export function slider (propertyAccess: () => any, min: number, max: number, step: number, slideAction: (propertyChange: KeyValue) => any, ...values: HValue[])
+export function inputRange (component: Component, prop: PropertyRef<number>, props: InputRangeProps, ...values: HValue[])
 {
-    var handler = handlePropertyChange (propertyAccess, slideAction)
+    const onchange = (e: Event) => setPropertyValue (component, prop, parseFloatDeNaN ((<HTMLInputElement>e.target).value))
+
     return input (
         {
             type: "range",           
-            min: min,
-            max: max,
-            value: propertyAccess(),
-            oninput: handler,
-            onchange: handler,
-            step: step
+            value: getPropertyValue (component, prop),
+            oninput: onchange,
+            onchange: onchange,
+            onUpdated: (el: HTMLInputElement) => { el.value = getPropertyValue (component, prop) }
         },
         ...values
     )
 }
 
-export function selector
+export type SelectorProps = {
+    attrs?: HProps
+    hasEmpty?: boolean
+}
+
+export interface SelectOption<T> {
+    value: T
+    label: HValue,
+    disabled? : boolean
+}
+
+export function selector<T extends BasicBindableType>
 (
-    propertyAccess: () => any,
-    options: string[][] = [],
-    hasEmpty: boolean = false,
-    selectAction: (propertyChange: KeyValue) => any,
-    ...values: HValue[]
+    component: Component,
+    prop: PropertyRef<T>,
+    options: SelectOption<T>[] = [],
+    props: SelectorProps
 )
 {
-    const value = propertyAccess()
-    const allOptions = ! hasEmpty ? options : [["", ""], ...options]
-    const id = key (propertyAccess)
+    const value = getPropertyValue (component, prop)
+    const allOptions = ! props.hasEmpty ? options : [{value: undefined, label: "", disabled:false}, ...options]
+    const id = getPropertyKey (prop)
+    const guideValue = ! options.length ? undefined : options[options.length-1].value
 
     return (
-        select (
-            {
+        select ({
                 type: "select",
                 name : id,
                 id : id,
-                onchange: handlePropertyChange (propertyAccess, selectAction)
+                onchange: e => setPropertyValue (component, prop,
+                    typeify<T> (guideValue, (<any>e.target).value)
+                )
             },
-            ...values,
-            ...allOptions.map (pair =>
+            props.attrs,
+            ...allOptions.map (so =>
                 option ({
-                    value: pair[0],
-                    selected: fuzzyEquals (pair[0], value) ? "selected" : undefined
+                    value: so.value,
+                    selected: fuzzyEquals (so.value, value) ? "selected" : undefined,
+                    disabled: so.disabled ? "disabled" : undefined
                 },
-                    pair[1]
+                    so.label
                 )
             )
         )
     )
 }
 
-export function radioGroup 
+export interface RadioOption<T> extends SelectOption<T> {
+    extraItem?: HValue
+}
+
+export type RadioGroupProps =
+{
+    attrs?: HProps,    
+    optionAttrs?: HProps,
+    inputAttrs?: HProps,
+    labelAttrs?: HProps,
+    prefix?: string
+}
+
+export function radioGroup<T extends BasicBindableType>
 (
-    propertyAccess: () => any,
-    options: string[][] = [],
-    checkedAction: (propertyChange: KeyValue) => any
+    component: Component,
+    prop: PropertyRef<T>,
+    options: RadioOption<T>[] = [],    
+    props: RadioGroupProps = {}
 )
 {
-    return options.map (pair =>
-        label (
-            input({
-                value: pair[0],
-                name: key (propertyAccess),
-                type: "radio",
-                checked: fuzzyEquals(pair[0], propertyAccess()) ? "checked" : undefined,
-                onchange: handlePropertyChange (propertyAccess, checkedAction),
-                onUpdated: (element: HTMLInputElement, attributes?: VAttributes) => {
-                    element.checked = element.getAttribute ("checked") == "checked"
-                }
-            }),
-            pair[1],
-            br()
+    const id = (props.prefix || "") + getPropertyKey(prop) 
+    return (
+        div ({ id: id }, props.attrs,
+            options.map(option => {
+                const checked = fuzzyEquals (option.value, getPropertyValue (component, prop))
+                const optionId = id+"-"+option.value
+                return div ( props.optionAttrs,
+                    input({
+                        id: optionId,
+                        value: "" + option.value,
+                        name: id,
+                        type: "radio",
+                        checked: checked ? "checked" : undefined,
+                        onchange: e => setPropertyValue (component, prop,
+                            typeify<T> (options[0].value, (<any>e.target).value)
+                        ),
+                        onUpdated: el => {                              
+                            (<HTMLInputElement>el).checked = el.getAttribute ("checked") == "checked"
+                        }
+                    },
+                        props.inputAttrs
+                    ),
+                    label ({ for: optionId }, props.labelAttrs, option.label),
+                    option.extraItem
+                )
+            })
         )
     )
- }
+}
+
+export function checkbox
+(
+    component: Component,
+    prop: PropertyRef<boolean | undefined>,
+    props: CheckProps = {}
+)
+{
+    const id = (props.prefix || "") + getPropertyKey(prop) 
+
+    return (
+        div (props.attrs,
+            input (                
+                {
+                    id: id,
+                    value: "" + getPropertyValue (component, prop),
+                    type: "checkbox",
+                    name: id,
+                    checked: getPropertyValue (component, prop) ? "checked" : undefined,
+                    onchange: () => {
+                        setPropertyValue (component, prop, ! getPropertyValue (component, prop))
+                    },
+                    onUpdated: el => {                              
+                        (<HTMLInputElement>el).checked = el.getAttribute ("checked") == "checked"
+                    }
+                },
+                props.inputAttrs,
+            ),
+            label ({ for: id }, props.labelAttrs, props.label || getFriendlyName (component, prop))
+        )
+    )
+}
+
+export type CheckProps = {
+    attrs?: HProps,
+    labelAttrs?: HProps,
+    inputAttrs?: HProps,
+    label?: HValue,
+    prefix?: string,
+}
+
+export function inputTextArea
+(
+    component: Component,
+    prop: PropertyRef<string>,    
+    props: InputProps,    
+    ...values: HValue[]
+)
+{    
+    return textarea (
+        {
+            oninput: e => setPropertyValue (component, prop, ((<HTMLTextAreaElement>e.target).value)),            
+            onUpdated: (el: HTMLInputElement) => el.value = getPropertyValue (component, prop)
+        },
+        ...values,
+        getPropertyValue (component, prop)
+    )  
+}

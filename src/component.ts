@@ -1,18 +1,18 @@
 ﻿import { App } from './app';
 import { div } from './html'
 import { VElement } from './dom'
-import { parseTyped, KeyValue, ensureFieldsNums, IsSystemProperty, isSystemProperty } from './util'
+import { NonData, isNonData } from './util'
 import { Exclude, Type } from 'class-transformer'
 
 export abstract class Component
 {
     /** The app associated with the component; undefined if not yet attached - use judiciously - main purpose is internal use by update method */
-    @IsSystemProperty() @Exclude() app?: App
+    @NonData() @Exclude() app?: App
 
     /** The parent component; undefined if the root component - use judiciously - main purpose is internal use by update method */
-    @IsSystemProperty() @Exclude() parent?: Component   
+    @NonData() @Exclude() parent?: Component   
 
-    @IsSystemProperty() @Exclude() private refreshQueue: Function[] = []
+    @NonData() @Exclude() private refreshQueue: Function[] = []
 
     /** Called after construction, with a flag indicating if deserialization occured */
     attached (deserialized: boolean) {}
@@ -64,14 +64,6 @@ export abstract class Component
         this.appRefresh()
     }
 
-    /** A convenient shortcut to update a component property; wraps property change in update */
-    updateProperty (payload: KeyValue) {
-        this.update (() => 
-            this[payload.key] = parseTyped (payload.value, this[payload.key]),
-            payload
-        )
-    }    
-
     /* Returns the root component by recursively walking through each parent */
     root() : Component {
         return ! this.parent ? this : this.parent.root()
@@ -122,10 +114,8 @@ export abstract class Component
         for (var child of this.children())
             child.attach (app, this, deserialize)
        
-        if (detached) {
-            ensureFieldsNums (this)
-            this.attached (deserialize)             
-        }
+        if (detached)            
+            this.attached (deserialize)                     
     }
 
     /** internal use only */
@@ -150,8 +140,10 @@ export abstract class Component
         }
     }
 
-    /** Returns properties not marked with the `isSystemProperty()` decorator. */
-    properties() {
-        return Object.keys (this).filter(k => ! isSystemProperty (this, k))
+    /** Returns properties not marked with the `@NonData()` decorator. Think of it like a customizable Object.getKeys method,
+     * where you can black-list properties that aren't part of your domain. The properties on the Component base class are
+     * marked with @NonData(). @NonData() is often used in conjuction with @Exclude() */
+    dataKeys() {
+        return Object.keys (this).filter(k => ! isNonData (this, k))
     }
 }

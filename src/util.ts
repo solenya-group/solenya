@@ -1,15 +1,6 @@
 ﻿import 'reflect-metadata'
-
-export type KeyValue = {
-    key: string
-    value?: string
-}
-
-export type PropertyName = string | (() => any)
-
-export function propertyName(name: PropertyName) {
-    return typeof(name) == "string" ? name : key (name)
-}
+import { PropertyRef } from '.';
+import { getPropertyKey } from './widgets';
 
 export function key (propertyAccess: () => any) {
     return (""+propertyAccess).match (/\.([a-zA-Z_$][0-9a-zA-Z_$]*)[^\.]*$/)![1]
@@ -29,19 +20,11 @@ export function fuzzyEquals(x: any, y: any) {
     )
 }
 
+export const parseFloatDeNaN = (s: string) =>
+    Let (parseFloat (s), n => isNaN (n) ? undefined : n)
+
 export function literal (html: string) {
     return (element: Element) => {element.innerHTML = html}
-}
-
-export function parseTyped (s: string|undefined, guideValue: any) {
-    if (s == null || guideValue == null)       
-        return s
-    var type = guessPrimitiveType (guideValue)
-    if (type == "number")
-        return parseFloat (s)
-    if (type == "boolean")
-        return s == "true"
-    return s
 }
 
 export function Let<T, U>(obj: T, op: (x: T) => U) {
@@ -52,41 +35,24 @@ export function isNullOrEmpty (s?: string | null) {
     return s == null || s === ''
 }
 
-// needed to work on ie
-export function guessPrimitiveType (value: any)
-{
-    if (value === undefined)
-        return "undefined"
-    if (value === null)
-        return "null"
-    var type = value.constructor.toString()
-    if (type.indexOf ("Number") != -1)
-        return "number"
-    if (type.indexOf ("Boolean") != -1)
-        return "boolean"
-    return "string"
+export function NonData() {
+    return Reflect.metadata("nonData", true);
 }
 
-export function Num() {
-    return Reflect.metadata("num", true);
+export function isNonData(target: any, propertyKey: string) {    
+    return Reflect.getMetadata("nonData", target, propertyKey);
 }
 
-export function getNum(target: any, propertyKey: string) {
-    return Reflect.getMetadata("num", target, propertyKey);
+export function Label (s: string) {
+    return Reflect.metadata("label", s);
 }
 
-export function ensureFieldsNums (obj: object) {
-    for (var x of Object.keys(obj))
-        if (getNum(obj, x)) {
-            const n = obj[x]
-            obj[x] = n == null ? NaN : parseFloat (n)
-        }
+export function getLabel(target: any, propertyKey: string) {
+    return Reflect.getMetadata("label", target, propertyKey) as string|undefined
 }
 
-export function IsSystemProperty() {
-    return Reflect.metadata("isSystemProperty", true);
-}
-
-export function isSystemProperty(target: any, propertyKey: string) {
-    return Reflect.getMetadata("isSystemProperty", target, propertyKey);
-}
+export const humanizeIdentifier = (str: string) =>
+  str
+    .replace (/[a-z][A-Z]/g, x => "" + x[0] + " " + x[1])
+    .replace (/_[a-z]/g, x => " " + x.slice(1).toUpperCase())
+    .replace (/^./, x => x.toUpperCase())
