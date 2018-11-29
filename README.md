@@ -498,6 +498,8 @@ To make writing forms easier, pickle provides some widget functions for common i
 * `radioGroup` : group of labelled radio buttons
 * `checkbox` : labelled checkbox
 
+The input functions are css agnostic - you can precisely control an input's attributes and nested element attributes.
+
 In this example, we write a BMI component with two sliders:
 
 ```typescript
@@ -514,12 +516,12 @@ export class BMI extends Component
         return div (             
             div (
                 "height",
-                inputRange (this, () => this.height, {}, {min:100, max: 250, step: 1}),
+                inputRange ({component: this, prop: () => this.height, attrs: { min: 100, max: 250, step: 1 } }),
                 this.height
             ),
             div (
                 "weight",
-                inputRange (this, () => this.weight, {}, {min:30, max:150, step:1}),
+                inputRange ({component: this, prop: () => this.height, attrs: { min: 100, max: 250, step: 1 } })
                 this.weight
             ),
             div ("bmi: " + this.calc())
@@ -529,7 +531,18 @@ export class BMI extends Component
 ```
 [Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fbmi.ts)
 
-All inputs are databound, with the first two arguments the component and the field on that component to bind to.
+All inputs are databound, and all take a single parameter. That parameter always inherits from the base class `CoreInputAttrs<T>`:
+
+```typescript
+export interface CoreInputAttrs<T> { // T is the data type to bind to (e.g. a number)
+    component: Component, // component to bind to
+    prop: PropertyRef<T>, // property on component to bind to, either a string, or typed using the syntax: () => this.firstName
+    attrs: HProps // the attributes for the input
+}
+```
+Minimially, all inputs will have an `attrs` type. More complex input types have many other properties. Some of these properties specify nested attribues. You can use the `combineObjAttrs` helper function to merge together several objects, where any properties on those objects whose name ends with `attrs` will have their attributes and styles merged, rather than overwritten. This makes it much easier to write reusable input functions.
+
+In the above example, there's clearly boilerplate. In the next section, you'll notice you can easily write your own `inputUnit` higher-level function that generalizes the concept of an input with a label and validation.
 
 ## Validation
 
@@ -542,9 +555,9 @@ export class ValidationSample extends MyForm implements IValidated
 {     
     @Exclude() validator: Validator = new Validator (this)
     
-    @MinLength(3) @MaxLength(10) @IsNotEmpty()  username?: string
-    @Min(0) @Max(10)                            rating? number
-    @IsNumber()                                 bonus? number
+    @Label("Your User Name") @MinLength(3) @MaxLength(10) @IsNotEmpty()  username?: string
+    @Min(0) @Max(10)                                                     rating? number
+    @IsNumber()                                                          bonus? number
 
     ok() {
         this.validator.validateThenUpdate()
@@ -557,9 +570,9 @@ export class ValidationSample extends MyForm implements IValidated
 
     view () : VElement {           
         return div (  
-            superInput (this, myInputText, () => this.username,
-            superInput (this, myInput, () => this.rating,
-            superInput (this, inputCurrency, () => this.bonus),
+            inputUnit (this, () => this.username, props => inputText (props)),
+            inputUnit (this, () => this.rating, props => inputNumber (props),
+            inputUnit (this, () => this.bonus, props => inputCurrency (props)),
             div (
                 myButton ({ onclick: () => this.ok() }, "ok")
             )
@@ -569,13 +582,11 @@ export class ValidationSample extends MyForm implements IValidated
 ```
 [Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fvalidation.ts)
 
-By decorating class properties, you can express constraints.
+By decorating class properties, you can express constraints, as well as custom labels to be used for display and validation.
 
 When you're ready to validate (in this case because the user clicked 'ok'), you call the `validator`'s `validateThenUpdate` method. This compares the component's properties to the constraints on those properties. When complete, the `validationErrors` property on the `validator` will contain an element for each property with constraint violations.
 
 We use the `component`'s update method to keep validated after we've first validated, to give the user continuous feedback. We can also manually flip `wasValidated` back to false.
-
-Importanty, we use a custom `superInput` higher-order function that you can take a look at in the samples. It takes an input function as a parameter, and adds a label and validation message. Pickle encourages you to write higher-order functions by building on pickle's primitives.
 
 Validation works recursively for child components that also implement `IValidated`.
 

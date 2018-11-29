@@ -8,40 +8,49 @@ export interface HProps extends VAttributes, HAttributes {
 
 export type HValue = VNode | HProps | null | undefined
 
-function combineStyles (attributes: any, head: any)
-{
-    const existingCss = attributes && attributes['class']
-    const headCss = head['class']    
-    let css = (existingCss && headCss) ? (existingCss + ' ' +headCss) : existingCss || headCss
-
-    const headStyle = head["style"]
-
-    if (headStyle && typeof (headStyle) != 'string') {
-        css = ! css ? style (headStyle) : css + " " + style (headStyle)
-        head["style"] = undefined
+function typeStyleize (props?: HProps) {        
+    if (props && typeof (props.style) === 'object') {
+        props.class = ! props.class ?
+            style (props.style) :
+            props.class + " " + style (props.style)
+        props.style = undefined
     }
-    if (css) {
-        if (attributes)
-            attributes["class"] = css
-        else
-            head["class"] = css
-    }
+}
+
+export function combineAttrs (dominant: HProps | undefined, recessive: HProps | undefined) {
+    return combineAttrsMutate ({...dominant}, {...recessive})
+}
+
+function combineAttrsMutate (dominant: HProps|undefined, recessive: HProps|undefined)
+{    
+    typeStyleize (dominant)
+    typeStyleize (recessive)            
+
+    if (! dominant)
+        return recessive
+    else if (! recessive)
+        return dominant
+    
+    if (dominant.class && recessive.class)
+        dominant.class = dominant.class + " " + recessive.class
+
+    dominant = combineLifecycles (dominant, recessive)
+    dominant = <HAttributes & VLifecycle> merge (dominant, recessive)                                 
+
+    return dominant
+}
+
+function isAttribute (a?: any): a is HAttributes & VLifecycle {    
+    return a != null && typeof a == "object" && ! isVElement(<any>a) && ! Array.isArray(a)
 }
 
 export function h (tag: string, ...values: HValue[]): VElement
 {
-    var attributes = null
+    var attributes: HProps | undefined
     while (values.length > 0) {
         var head = values[0]        
-        if (head != null && typeof head == "object" && ! isVElement(<any>head) && ! Array.isArray(head))
-        {
-            combineStyles (attributes, head)
-            if (! attributes)
-                attributes = head            
-            else {
-                combineLifecycles (attributes, <VLifecycle>head)                
-                attributes = merge (attributes, head)           
-            }                   
+        if (isAttribute (head)) {
+            attributes = combineAttrsMutate (attributes, head)
             values = values.slice(1)
         }
         else

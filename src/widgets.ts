@@ -1,100 +1,99 @@
-import { VElement, VAttributes } from './dom'
-import { HValue, button, input, select, option, div, label, span, br, a, HProps, textarea } from './html'
-import { key, Let, fuzzyEquals, parseFloatDeNaN, getLabel, humanizeIdentifier } from './util'
+import { VElement } from '.'
 import { Component } from './component'
+import { a, div, HProps, HValue, input, label, option, select, textarea, combineAttrs } from './html'
+import { fuzzyEquals, getLabel, humanizeIdentifier, key, parseFloatDeNaN } from './util'
 
 export type PropertyRef<T> = string | (() => T)
 
-export type BasicBindableType = string | number | undefined
-
-export function commandLink (...values: HValue[]) {
-    return a ({ href: "javascript:;"}, ...values)
-}
-
-export type InputValueProps<T> =
-{
-    inputStringToModel : (inputString: string, prevModel: T) => T,
-    modelToInputString : (model: T, prevInputString: string) => string,
-}
+export const commandLink = (...values: HValue[]) =>
+    a ({ href: "javascript:;"}, ...values)
 
 export const getPropertyKey = <T> (prop: PropertyRef<T>) =>
     typeof (prop) == "string" ? prop: key (prop)
 
-export const getPropertyValue = <T> (component: Component, prop: PropertyRef<T>) =>
-    component [getPropertyKey (prop)]
+export const getPropertyValue = <T> (props: DatabindProps<T>) =>
+    props.component [getPropertyKey (props.prop)]
 
-export const setPropertyValue = <T> (component: Component, prop: PropertyRef<T>, value: T) =>
+export const setPropertyValue = <T> (props: DatabindProps<T>, value: T) =>
 {    
-    const key = getPropertyKey (prop)
-    component.update (() =>
+    const key = getPropertyKey (props.prop)
+    props.component.update (() =>
         {            
-            component [key] = value
+            props.component [key] = value
         },
         {key: key, value: value}
     )
 }
 
-export const typeify = <T extends BasicBindableType> (guideValue: any, strValue: string) =>
+export const typeify = <T extends string|number|undefined> (guideValue: any, strValue: string) =>
     <T><any> (typeof(guideValue) == "number" ? parseFloatDeNaN (strValue) : strValue)
 
-export const getFriendlyName = <T>(obj: any, prop: PropertyRef<T>) => {
+export const getFriendlyName = <T> (obj: any, prop: PropertyRef<T>) => {
     const k = getPropertyKey (prop)
     return getLabel (obj, k) || humanizeIdentifier (k)
 }
 
-export function inputValue<T extends BasicBindableType>
-(
+export const combineObjAttrs = <T> (...objs: Partial<T>[]) => {    
+    const newObj = {}
+    for (var obj of objs)
+        for (var k of Object.keys (obj))
+            if (newObj[k] == null)
+                newObj[k] = obj[k]
+            else if (/[aA]ttrs/.test (k))
+                newObj[k] = combineAttrs (newObj[k], obj[k])            
+    return <T> newObj
+}
+
+export interface StringBinding<T>
+{   
+    inputStringToModel : (inputString: string, prevModel: T) => T
+    modelToInputString : (model: T, prevInputString: string) => string    
+}
+
+export interface InputValueProps<T> extends StringBinding<T>, CoreInputAttrs<T> {}
+
+export interface DatabindProps<T> {
     component: Component,
-    prop: PropertyRef<T>,    
-    props: InputValueProps<T>,    
-    ...values: HValue[]
-)
+    prop: PropertyRef<T>, 
+}
+
+export interface CoreInputAttrs<T> extends DatabindProps<T>
 {    
-    return input (
+    attrs?: HProps
+}
+
+export const inputValue = <T extends string|number|undefined> (props: InputValueProps<T>) =>
+    input (
         {
-            value: props.modelToInputString (getPropertyValue (component, prop), ""),
+            value: props.modelToInputString (getPropertyValue (props), ""),
             oninput: e =>
-                setPropertyValue (component, prop, 
+                setPropertyValue (props, 
                     props.inputStringToModel (
                         (<HTMLInputElement>e.target).value,
-                        getPropertyValue (component, prop)
+                        getPropertyValue (props)
                     )
             ),
             onUpdated: (el: HTMLInputElement) =>
-                el.value = props.modelToInputString (getPropertyValue (component, prop), el.value)
+                el.value = props.modelToInputString (getPropertyValue (props), el.value)
         },
-        ...values
+        props.attrs
     )  
-}
 
-/** Currently empty but here for future proofing */
-export type InputProps = {}
+export interface InputProps<T> extends CoreInputAttrs<T> {}
 
-export function inputText (component: Component, prop: PropertyRef<string|undefined>, options: InputProps, ...values: HValue[])
-{
-    return inputValue<string|undefined>(
-        component,
-        prop,
-        {
-            inputStringToModel: s => s,
-            modelToInputString: (s, prevS) => s || "",
-        },        
-        ...values
-    )
-}
+export const inputText = (props: InputProps<string|undefined>) =>
+    inputValue ({
+        ...props,
+        inputStringToModel: s => s,
+        modelToInputString: (s, prevS) => s || ""
+    })
 
-export function inputNumber (component: Component, prop: PropertyRef<number|undefined>, options: InputProps, ...values: HValue[])
-{
-    return inputValue<number|undefined>(
-        component,
-        prop,
-        {
-            inputStringToModel: inputStringToNumber,
-            modelToInputString: numberToInputString
-        },
-        ...values
-    )
-}
+export const inputNumber = (props: InputProps<number|undefined>) =>
+    inputValue ({
+        ...props,
+        inputStringToModel: inputStringToNumber,
+        modelToInputString: numberToInputString,
+    })   
 
 export function inputStringToNumber (s: string, prevNumber: number|undefined) : number|undefined { 
     return parseFloatDeNaN (s)
@@ -111,68 +110,65 @@ export function numberToInputString (n: number|undefined, prevInputString: strin
     return "" + n
 }
 
-/** Currently empty but here for future proofing */
-export type InputRangeProps = {
-}
+export interface InputRangeProps extends CoreInputAttrs<number> {}
 
-export function inputRange (component: Component, prop: PropertyRef<number>, props: InputRangeProps, ...values: HValue[])
+export const inputRange = (props: InputRangeProps) =>
 {
-    const onchange = (e: Event) => setPropertyValue (component, prop, parseFloatDeNaN ((<HTMLInputElement>e.target).value))
+    const onchange = (e: Event) => setPropertyValue (props, parseFloatDeNaN ((<HTMLInputElement>e.target).value))
 
     return input (
         {
             type: "range",           
-            value: getPropertyValue (component, prop),
+            value: getPropertyValue (props),
             oninput: onchange,
             onchange: onchange,
-            onUpdated: (el: HTMLInputElement) => { el.value = getPropertyValue (component, prop) }
+            onUpdated: (el: HTMLInputElement) => { el.value = getPropertyValue (props) }
         },
-        ...values
+        props.attrs
     )
 }
 
-export type SelectorProps = {
-    attrs?: HProps
-    hasEmpty?: boolean
+export interface SelectorProps<T> extends CoreInputAttrs<T> {
+    options?: SelectOption<T>[]
+    hasEmpty?: boolean,
+    prefix?: string,
+    selectedClass?: string
 }
 
 export interface SelectOption<T> {
     value: T
     label: HValue,
-    disabled? : boolean
+    attrs?: HProps    
 }
 
-export function selector<T extends BasicBindableType>
-(
-    component: Component,
-    prop: PropertyRef<T>,
-    options: SelectOption<T>[] = [],
-    props: SelectorProps
+export function selector<T extends string|number|undefined> (
+    props: SelectorProps<T>  
 )
 {
-    const value = getPropertyValue (component, prop)
-    const allOptions = ! props.hasEmpty ? options : [{value: undefined, label: "", disabled:false}, ...options]
-    const id = getPropertyKey (prop)
+    const options = props.options || []
+    const value = getPropertyValue (props)
+    const allOptions = ! props.hasEmpty ? options : [<SelectOption<T>>{value: undefined, label: ""}, ...options]
+    const id = (props.prefix || "") + getPropertyKey(props.prop) 
     const guideValue = ! options.length ? undefined : options[options.length-1].value
 
     return (
         select ({
-                type: "select",
-                name : id,
-                id : id,
-                onchange: e => setPropertyValue (component, prop,
-                    typeify<T> (guideValue, (<any>e.target).value)
-                )
-            },
+            type: "select",
+            name : id,
+            id : id,
+            onchange: e => setPropertyValue (props, typeify<T> (guideValue, (<any>e.target).value))
+        },
             props.attrs,
-            ...allOptions.map (so =>
-                option ({
+            ...allOptions.map (so => {
+                const isSelected = fuzzyEquals (so.value, value)
+                return option ({
                     value: so.value,
-                    selected: fuzzyEquals (so.value, value) ? "selected" : undefined,
-                    disabled: so.disabled ? "disabled" : undefined
+                    selected: isSelected ? "selected" : undefined,
+                    class: isSelected ? props.selectedClass : undefined
                 },
+                    so.attrs,
                     so.label
-                )
+                )}
             )
         )
     )
@@ -182,41 +178,48 @@ export interface RadioOption<T> extends SelectOption<T> {
     extraItem?: HValue
 }
 
-export type RadioGroupProps =
-{
-    attrs?: HProps,    
+export interface RadioGroupProps<T> extends CoreInputAttrs<T> {
+    options?: RadioOption<T>[]
     optionAttrs?: HProps,
     inputAttrs?: HProps,
     labelAttrs?: HProps,
-    prefix?: string
+    prefix?: string,
+    selectedClass?: string
 }
 
-export function radioGroup<T extends BasicBindableType>
-(
-    component: Component,
-    prop: PropertyRef<T>,
-    options: RadioOption<T>[] = [],    
-    props: RadioGroupProps = {}
-)
+export function radioGroup<T extends string|number|undefined> (props: RadioGroupProps<T>)
 {
-    const id = (props.prefix || "") + getPropertyKey(prop) 
+    const options = props.options || []
+    const id = (props.prefix || "") + getPropertyKey(props.prop) 
     return (
         div ({ id: id }, props.attrs,
             options.map(option => {
-                const checked = fuzzyEquals (option.value, getPropertyValue (component, prop))
+                const checked = fuzzyEquals (option.value, getPropertyValue (props))
                 const optionId = id+"-"+option.value
-                return div ( props.optionAttrs,
+                return div (
+                    props.optionAttrs,
+                    {
+                        class: checked ? props.selectedClass : undefined,
+                        onAttached: el => {
+                            if (props.selectedClass) {
+                                if (checked)
+                                    el.classList.add (props.selectedClass)
+                                else
+                                    el.classList.remove (props.selectedClass)
+                            }
+                        }
+                    },
                     input({
                         id: optionId,
                         value: "" + option.value,
                         name: id,
                         type: "radio",
-                        checked: checked ? "checked" : undefined,
-                        onchange: e => setPropertyValue (component, prop,
+                        checked: checked ? "checked" : "",                        
+                        onchange: e => setPropertyValue (props,
                             typeify<T> (options[0].value, (<any>e.target).value)
                         ),
-                        onUpdated: el => {                              
-                            (<HTMLInputElement>el).checked = el.getAttribute ("checked") == "checked"
+                        onUpdated: (el: HTMLInputElement) => {                              
+                            el.checked = el.getAttribute ("checked") == "checked"
                         }
                     },
                         props.inputAttrs
@@ -229,26 +232,28 @@ export function radioGroup<T extends BasicBindableType>
     )
 }
 
-export function checkbox
-(
-    component: Component,
-    prop: PropertyRef<boolean | undefined>,
-    props: CheckProps = {}
-)
+export interface CheckProps extends CoreInputAttrs<boolean> {
+    labelAttrs?: HProps,
+    inputAttrs?: HProps,
+    label?: HValue,
+    prefix?: string,
+}
+
+export function checkbox (props: CheckProps)
 {
-    const id = (props.prefix || "") + getPropertyKey(prop) 
+    const id = (props.prefix || "") + getPropertyKey(props.prop) 
 
     return (
         div (props.attrs,
             input (                
                 {
                     id: id,
-                    value: "" + getPropertyValue (component, prop),
+                    value: "" + getPropertyValue (props),
                     type: "checkbox",
                     name: id,
-                    checked: getPropertyValue (component, prop) ? "checked" : undefined,
+                    checked: getPropertyValue (props) ? "checked" : undefined,
                     onchange: () => {
-                        setPropertyValue (component, prop, ! getPropertyValue (component, prop))
+                        setPropertyValue (props, ! getPropertyValue (props))
                     },
                     onUpdated: el => {                              
                         (<HTMLInputElement>el).checked = el.getAttribute ("checked") == "checked"
@@ -256,33 +261,15 @@ export function checkbox
                 },
                 props.inputAttrs,
             ),
-            label ({ for: id }, props.labelAttrs, props.label || getFriendlyName (component, prop))
+            label ({ for: id }, props.labelAttrs, props.label || getFriendlyName (props.component, props.prop))
         )
     )
 }
-
-export type CheckProps = {
-    attrs?: HProps,
-    labelAttrs?: HProps,
-    inputAttrs?: HProps,
-    label?: HValue,
-    prefix?: string,
-}
-
-export function inputTextArea
-(
-    component: Component,
-    prop: PropertyRef<string>,    
-    props: InputProps,    
-    ...values: HValue[]
-)
-{    
-    return textarea (
-        {
-            oninput: e => setPropertyValue (component, prop, ((<HTMLTextAreaElement>e.target).value)),            
-            onUpdated: (el: HTMLInputElement) => el.value = getPropertyValue (component, prop)
-        },
-        ...values,
-        getPropertyValue (component, prop)
-    )  
-}
+export const inputTextArea = (props: InputProps<string>) =>
+    textarea ({
+        oninput: e => setPropertyValue (props, ((<HTMLTextAreaElement>e.target).value)),            
+        onUpdated: (el: HTMLInputElement) => el.value = getPropertyValue (props)
+    },
+        props.attrs,
+        getPropertyValue (props)     
+    )
