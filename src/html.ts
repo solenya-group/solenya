@@ -2,26 +2,28 @@
 import { combineLifecycles } from './lifecycle'
 import { style, types } from 'typestyle'
 
-export interface HProps extends VAttributes, HAttributes {
+export interface HAttributes extends VAttributes, KnownHtmlAttributes {
     [key: string] : any
 }
 
-export type HValue = VNode | HProps | null | undefined
+export type HValue = VNode | HAttributes | null | undefined
 
-function typeStyleize (props?: HProps) {        
-    if (props && typeof (props.style) === 'object') {
-        props.class = ! props.class ?
-            style (props.style) :
-            props.class + " " + style (props.style)
-        props.style = undefined
+function typeStyleize (attrs?: HAttributes) {        
+    if (attrs && typeof (attrs.style) === 'object') {
+        attrs.class = ! attrs.class ?
+            style (attrs.style) :
+            attrs.class + " " + style (attrs.style)
+        attrs.style = undefined
     }
 }
 
-export function combineAttrs (dominant: HProps | undefined, recessive: HProps | undefined) {
-    return combineAttrsMutate ({...dominant}, {...recessive})
+/** Merges two attribute structures, where style structures are converted to classes using style style,
+ * classes are combined, and lifecycle hooks are combined. */
+export function mergeAttrs (dominant: HAttributes | undefined, recessive: HAttributes | undefined) {
+    return mergeAttrsMutate ({...dominant}, {...recessive})
 }
 
-function combineAttrsMutate (dominant: HProps|undefined, recessive: HProps|undefined)
+function mergeAttrsMutate (dominant: HAttributes | undefined, recessive: HAttributes | undefined)
 {    
     typeStyleize (dominant)
     typeStyleize (recessive)            
@@ -35,29 +37,29 @@ function combineAttrsMutate (dominant: HProps|undefined, recessive: HProps|undef
         dominant.class = dominant.class + " " + recessive.class
 
     dominant = combineLifecycles (dominant, recessive)
-    dominant = <HAttributes & VLifecycle> merge (dominant, recessive)                                 
+    dominant = <HAttributes> merge (dominant, recessive)                                 
 
     return dominant
 }
 
-function isAttribute (a?: any): a is HAttributes & VLifecycle {    
+function isAttribute (a?: any): a is HAttributes {    
     return a != null && typeof a == "object" && ! isVElement(<any>a) && ! Array.isArray(a)
 }
 
 export function h (tag: string, ...values: HValue[]): VElement
 {
-    var attributes: HProps | undefined
+    var attrs: HAttributes | undefined
     while (values.length > 0) {
         var head = values[0]        
         if (isAttribute (head)) {
-            attributes = combineAttrsMutate (attributes, head)
+            attrs = mergeAttrsMutate (attrs, head)
             values = values.slice(1)
         }
         else
             break
     }
 
-    return createVElement(tag, attributes || {}, ...values)        
+    return createVElement(tag, attrs || {}, ...values)        
 }
 
 export function a(...values: HValue[]) {
@@ -464,7 +466,7 @@ export function wbr(...values: HValue[]) {
     return h("wbr", ...values)
 }
 
-export interface HAttributes {
+export interface KnownHtmlAttributes {
     accept?: string
     accesskey?: string
     action?: string

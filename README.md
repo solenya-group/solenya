@@ -516,12 +516,12 @@ export class BMI extends Component
         return div (             
             div (
                 "height",
-                inputRange ({component: this, prop: () => this.height, attrs: { min: 100, max: 250, step: 1 } }),
+                inputRange ({target: this, prop: () => this.height, attrs: { min: 100, max: 250, step: 1 } }),
                 this.height
             ),
             div (
                 "weight",
-                inputRange ({component: this, prop: () => this.height, attrs: { min: 100, max: 250, step: 1 } })
+                inputRange ({target: this, prop: () => this.height, attrs: { min: 100, max: 250, step: 1 } })
                 this.weight
             ),
             div ("bmi: " + this.calc())
@@ -531,16 +531,16 @@ export class BMI extends Component
 ```
 [Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fbmi.ts)
 
-All inputs are databound, and all take a single parameter. That parameter always inherits from the base class `CoreInputAttrs<T>`:
+All inputs are databound, and all take a single parameter. That parameter always inherits from the base class `InputProps<T>`:
 
 ```typescript
-export interface CoreInputAttrs<T> { // T is the data type to bind to (e.g. a number)
-    component: Component, // component to bind to
-    prop: PropertyRef<T>, // property on component to bind to, either a string, or typed using the syntax: () => this.firstName
-    attrs: HProps // the attributes for the input
+export interface InputProps<T> { // T is the data type to bind to (e.g. a number)
+    target: Component, // component to bind to
+    prop: PropertyRef<T>, // property on target, in either typed or untyped form, e.g. `() => this.firstName` or `firstName`
+    attrs?: HAttributes // the attributes for the input
 }
 ```
-Minimially, all inputs will have an `attrs` type. More complex input types have many other properties. Some of these properties specify nested attribues. You can use the `combineObjAttrs` helper function to merge together several objects, where any properties on those objects whose name ends with `attrs` will have their attributes and styles merged, rather than overwritten. This makes it much easier to write reusable input functions.
+Minimially, all inputs will have an `attrs` type. More complex input types have many other properties. Some of these properties specify nested attribues. You can use the `mergeNestedAttrs` helper function to merge together several objects, where any properties on those objects whose name ends with `attrs` will have their attributes and styles merged, rather than overwritten. This makes it much easier to write reusable input functions.
 
 In the above example, there's clearly boilerplate. In the next section, you'll notice you can easily write your own `inputUnit` higher-level function that generalizes the concept of an input with a label and validation.
 
