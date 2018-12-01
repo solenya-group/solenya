@@ -98,11 +98,27 @@ Pickle is small: see and understand the source code for yourself. Its power come
 - [Comparison Table](#comparison-table)
 - [Integration with Existing Libraries](#integration-with-existing-libraries)
 - [Installation](#installation)
-- [State, View and Updates](#state--view-and-updates)
+- [State, View and Updates](#state-view-and-updates)
 - [Composition](#composition)
 - [Component Initialization](#component-initialization)
 - [Updates](#updates)
-- [Views](#views)
+- [HTML Helpers](#html-helpers)
+- [Style](#style)
+  * [Important Gotcha](#important-gotcha)
+- [Forms](#forms)
+  * [Validation](#validation)
+- ['this' Rules](#this-rules)
+- [Routing](#routing)
+  - [Navigation](#navigation)
+  - [Initialisation and Browser History](#initialisation-and-browser-history)
+  - [Navigation Links](#navigation-links)
+- [Child-To-Parent Communication](#child-to-parent-communication)
+  * [Callback Communication](#callback-communication)
+    * [todoMVC](#todomvc)
+  * [Parent Interface Communication](#parent-interface-communication)
+  * [Update Communication](#update-communication)
+- [Interacting with the DOM](#interacting-with-the-dom)
+  * [onRefreshed](#onRefreshed)
   * [Lifecycle Events](#lifecycle-events)
   * [DOM Keys](#dom-keys)    
   * [Animating a List](#animating-a-list)
@@ -114,21 +130,6 @@ Pickle is small: see and understand the source code for yourself. Its power come
   * [Keep your component state small](#keep-your-component-state-small)
 - [Hot Module Reloading](#hot-module-reloading)
 - [Async](#async)
-- [Forms](#forms)
-  * [Validation](#validation)
-- ['this' Rules](#-this--rules)
-- [HTML Helpers](#html-helpers)
-- [Style](#style)
-  * [Important Gotcha](#important-gotcha)
-- [Routing](#routing)
-  - [Navigation](#navigation)
-  - [Initialisation and Browser History](#initialisation-and-browser-history)
-  - [Navigation Links](#navigation-links)
-- [Child-To-Parent Communication](#child-to-parent-communication)
-  * [Callback Communication](#callback-communication)
-    * [todoMVC](#todomvc)
-  * [Parent Interface Communication](#parent-interface-communication)
-  * [Update Communication](#update-communication)
 - [API Reference](#api-reference)
   * [Component Class API](#component-class-api)
     * [Component View Members](#component-view-members)
@@ -236,7 +237,489 @@ You can add as may optional parameters as you want to your child component `View
 
 To write a reusable view, your first approach should be to merely write a function that returns a `VElement`. Only use child components when you need to encapsulate state.
 
-You may also call `Component.onRefreshed` to queue a callback to perform DOM side effects after the next refresh. You typically do so in the `view` method:
+# HTML Helpers
+
+The HTML helpers take a spread of attribute objects, elements, and primitive values. Pickle has been designed to work well with Typescript, so your IDE can provide statement completion. In conjunction with `typestyle`, as we'll see later, we get a deep, clean static typing experience.
+
+Attribute objects go first. Some examples:
+
+```typescript
+div ()                                  // empty
+div ("hello")                           // primitive value
+div ({id: 1})                           // attribute
+div ({id: 1, class: "foo"})             // multiple attributes
+div ({id: 1}, "hello")                  // attribute followed by element
+div (div ())                            // nested elements
+div ({id: 1}, "hello", div("goodbye"))  // combination
+```
+Multiple attribute objects are merged. Merging attributes is really useful when writing functions allowing the caller to merge their own attributes in with yours. The following are equivalent:
+
+```typescript
+div ({id: 1}, {class:"foo"})
+div ({id: 1, class:"foo"})  
+```
+
+All the HTML element helper functions such as `div` and `span`, call through to the `h` function. the `h` function merges multiple attribute objects using the `mergeAttrs` method, which you can also directly call yourself.
+
+Event handlers are specified as simply a name followed by the handler:
+```
+button (
+    { onclick: () => this.add (1) }, "+"
+)
+```
+
+# Style
+
+While you can use ordinary css or scss files with pickle, pickle has first class support for [typestyle](https://github.com/typestyle/typestyle), that lets you write css in typescript.
+
+The key advantages are:
+
+* Typescript is far more powerful than any stylesheet language - it's a better way to organize and abstract your styles.
+* It eliminates the seam between your view functions and styles - easily pass in variables to dynamically create styles.
+* You can colocate your code with your styles, or provide exactly the appropriate level of coupling to maximise maintainability.
+
+Here's what it looks like:
+
+```typescript
+div ({style: {color:'green' }}, 'pickle')
+```
+Pickle will call typestyle's `style` function on the object you provide. It's as if you called:
+
+```typescript
+div ({class: style ({color:'green'})}, 'pickle')
+```
+If you need to reuse a style, then don't inline the style: declare it as a variable and refer to it in your class attribute. You can factor it just as you please.
+
+Typestyle will dynamically create a small unique class name, and add css to the top of your page. So the following:
+
+```typescript
+div ({style: {color: 'green'} },
+    "pickle"
+)
+```
+Which will generate something like:
+
+```html
+<div class="fdwf33">
+    pickle
+</div>
+```
+With the following css:
+```css
+fdwf33 {
+    style: green;
+}
+```
+Pickle automatically merges css values. The following are equivalent:
+
+```typescript
+div ({class: "big"}, {class: "happy"})
+div ({class: "big happy"})
+```
+
+You may also use ordinary style strings rather than objects, which bypasses the typestyle library.
+
+## Important Gotcha
+
+Since style objects are actually converted into classes, they may not override other styles in other classes that apply to that element. If this is a issue either add the `!important` modifier to the style, or revert to a string style. You should however discover that with typestyle you have less need to use the `!important` modifier in the first place as you can better abstract your styles.
+
+# Forms
+
+To make writing forms easier, pickle provides some widget functions for common inputs. You can easily build your own ones by examining the widgets source code.
+
+* `inputText` : text input
+* `inputNumber` : numeric input
+* `inputValue` : restricted input - use to make custom inputs such as `percentInput` or `currencyInput`
+* `inputTextArea` : text area input
+* `inputRange` : numeric range input
+* `selector` : select input
+* `radioGroup` : group of labelled radio buttons
+* `checkbox` : labelled checkbox
+
+The input functions are css agnostic - you can precisely control an input's attributes and nested element attributes. This enables you to write your own wrapper functions around these functions to target a particular css framework with your particular style. You then only need change the internals of your wrapper functions for all your forms code across your entire application to target completely different css.
+
+In this example, we write a BMI component with two sliders:
+
+```typescript
+export class BMI extends Component
+{
+    height = 180
+    weight = 80
+
+    calc () {
+        return this.weight / (this.height * this.height / 10000)
+    }
+
+    view () : VElement {       
+        return div (             
+            div (
+                "height",
+                inputRange ({target: this, prop: () => this.height, attrs: { min: 100, max: 250, step: 1 } }),
+                this.height
+            ),
+            div (
+                "weight",
+                inputRange ({target: this, prop: () => this.weight, attrs: { min: 100, max: 250, step: 1 } })
+                this.weight
+            ),
+            div ("bmi: " + this.calc())
+        )
+    }
+}
+```
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fbmi.ts)
+
+All inputs are databound, and all take a single parameter. That parameter always inherits from the base class `InputProps<T>`:
+
+```typescript
+export interface InputProps<T> { // T is the data type to bind to (e.g. a number)
+    target: Component, // component to bind to
+    prop: PropertyRef<T>, // target property, e.g. () => this.weight
+    attrs?: HAttributes // the attributes for the input
+}
+```
+The `target` and `prop` properties reference a component's property, enabling the input to be databound to that property. The `PropertyRef<T>` type can either take a function that refers to a property, such as `() => this.weight` or a ordinary string, e.g. `weight`. The former (statically typed) should be used when you know the property at compile time, and the latter (dynamically typed) should be used when you only know the property at runtime.
+
+Minimially, all inputs will have an optional `attrs` type. More complex input types have many other properties. Some of these properties specify nested attribues. You can use the `mergeAttrs` and `mergeNestedAttrs` helper functions to merge attributes. `mergeNestedAttrs` takes several objects, scans for properties on those objects whose name ends with `attrs`, and then calls through to `mergeAttrs` to merge those attributes and styles. This makes it much easier to write reusable and chainable helper functions.
+
+In the above example, there's clearly boilerplate. In the next section, you'll notice you can easily write your own `inputUnit` higher-level function that generalizes the concept of an input with a label and validation.
+
+## Validation
+
+The pickle library comes with a validator.
+
+The pickle validator builds on the excellent `class-validator` library to validate with javascript decorators. Here's an example of validating some properties on a component:
+
+```typescript
+export class ValidationSample extends MyForm implements IValidated
+{     
+    @Exclude() validator: Validator = new Validator (this)
+    
+    @Label("Your User Name") @MinLength(3) @MaxLength(10) @IsNotEmpty()  username?: string
+    @Min(0) @Max(10)                                                     rating? number
+    @IsNumber()                                                          bonus? number
+
+    ok() {
+        this.validator.validateThenUpdate()
+    }
+
+    updated (payload: any) {
+        if (this.validator.wasValidated)
+            this.validator.validateThenUpdate (payload)  
+    }
+
+    view () : VElement {           
+        return div (  
+            inputUnit (this, () => this.username, props => inputText (props)),
+            inputUnit (this, () => this.rating, props => inputNumber (props),
+            inputUnit (this, () => this.bonus, props => inputCurrency (props)),
+            div (
+                myButton ({ onclick: () => this.ok() }, "ok")
+            )
+        )       
+    }
+}
+```
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fvalidation.ts)
+
+By decorating class properties, you can express constraints, as well as custom labels to be used for display and validation.
+
+When you're ready to validate (in this case because the user clicked 'ok'), you call the `validator`'s `validateThenUpdate` method. This compares the component's properties to the constraints on those properties. When complete, the `validationErrors` property on the `validator` will contain an element for each property with constraint violations.
+
+We use the `component`'s update method to keep validated after we've first validated, to give the user continuous feedback. We can also manually flip `wasValidated` back to false.
+
+Validation works recursively for child components that also implement `IValidated`.
+
+### Asynchronous Validation
+
+Validation can be asynchronous, since you'll sometimes need to call a service to determine validity.
+
+```typescript
+class ValidationSample extends Component implements IValidated
+{
+    async customValidationErrors() {
+        ...
+    }
+}
+```
+The return type is `Promise<ValidationError[]>`, where `ValidationError` is a a type from the `class-validator` package.
+
+# 'this' Rules
+
+The `this` variable's binding is not as straightforward as in object oriented languages like C# and Java. There's a great article about [this here](https://github.com/Microsoft/TypeScript/wiki/'this'-in-TypeScript).
+
+Within pickle components, follow the pattern you see in this documentation, which has two rules:
+
+Always wrap a method that's used as a callback in a closure, otherwise `this` might be lost before it's bound.
+
+```typescript
+    // RIGHT
+    methodUsingYourCallback (e => this.updateProperty (e))
+    
+    // WRONG
+    methodUsingYourCallback (this.updateProperty)
+```
+Use ordinary class methods, not function members when calling update. Otherwise cloning — which pickle relies on for time travel — fails, since the cloned function will refer to the old object's this.
+
+```typescript
+    // RIGHT
+    add () {
+       return this.update (...
+
+    // WRONG
+    add = () =>
+        this.update (...
+```
+
+# Routing
+
+The pickle library comes with a composable router.
+
+The samples use routing in two places. First, each sample has it's own route. Second, we use a router so that each tab in the "tabSample" has a nested route. So here's the possible routes:
+
+```
+/counter
+/bmi
+/tabSample/apple
+/tabSample/banana
+/tabSample/cantaloupe
+```
+
+Let's start with the outer router first. 
+
+```
+export class Samples extends Component implements IRouted
+{
+    @Exclude() router:Router = new Router (this)
+    @Exclude() routeName = ""
+
+    counter = new Counter ()
+    bmi = new BMI ()    
+    tabSample = new TabSample ()
+    ...
+    
+    attached()
+    {
+        for (var k of this.childrenKeys()) {
+            this[k].router = new Router(this[k])
+            this[k].routeName = k
+        }
+        ...
+    }
+}
+```
+A component can be routed by implementing `IRouted`. A routed component defines a `routeName` property that corresponds to a *name* in a *path*.
+
+So for the path `/tabSample/banana`, there's a component with the `tabSample` `routeName`, which has a child component with the `banana` `routeName`. The root component, `Samples` has an empty string for its routeName.
+
+A *current route* is represented with a component route's `currentChildName` value. So the `currentChildName` of the `Samples` component's router is `tabSamples`, and the `curentChildName` of the `TabSample` component's router is `banana`. Finally, the `currentChildName` of the `banana` component's router is simply ``, since it's a leaf node, i.e. itself has no children.
+
+By default, the mapping from parent and child name to child component occurs by scanning the parent for children and returning one that has a `routeName` that (case insensitively) matches the name provided. For complete control, you could implement the `childRoute` method to customize that default behaviour.
+
+## Navigation
+
+You can call a component router's `navigate` method, specifying the child path to go to. All routes are expressed *relatively*, not *absolutely*. In the examples below, we navigate to `banana`:
+
+```
+// when navigating from 'banana':
+this.router.navigate ('')
+
+// when navigating from 'tabSample':
+this.router.navigate ('banana')
+
+// when navigating from 'apple', via the parent
+this.router.parent.navigate ('banana')
+
+// when navigating from 'apple', via the root
+this.router.root.navigate ('tabSample/banana')
+```
+
+## Initialisation and Browser History
+
+Your first navigation typically occurs in the `attached` method of your root component. For example:
+    
+```
+export class Samples extends Component implements IRouted {
+    attached() {
+        ...
+        this.router.navigate (location.pathname)
+    }
+    ...
+}
+```
+The initial call to `navigate` on your root router is special in terms of navigation events:
+
+* History tracking begins
+  * This means from then on, actions such as the back and forward button on the browser will trigger navigation events.
+  * (The router internally uses the `history` api to update the browser history and to respond to browser navigation events.)
+* Navigation callbacks always run
+  * The `beforeNavigate` and `navigated` callbacks on your component, if present, will be called even if the current url is identical to the url navigated to.
+  * This is because before the initial navigation, it shouldn't be assumed that the application state reflects the current url.
+
+## Intercepting Navigation
+
+We can implement the `navigated` method to detect when a component is routed. We do this in the `Relativity` sample, where we have a continuous animation that we want to trigger when the component is routed:
+
+```typescript
+export class Relativity extends Component {
+    navigated() {
+        ...
+    }
+}
+```
+
+[play](https://stackblitz.com/edit/pickle-samples?file=app%2Frelativity.ts)
+
+`navigated` will be called for each component in the path.
+
+We intercept `navigate` by implementing `beforeNavigate`. It's important to be able to intercept navigation for several reasons:
+
+ * Prevention: We don't want the user to leave the current form until it's validated, or perhaps we want to redirect the user to another route
+ * Preparation: We need to fetch data, perhaps asynchronously, before we can complete the navigation.
+ * Redirection: We want to redirect the user by canceling the current navigation and navigating to a new path.
+
+In the `TabGroup` component, we use `beforeNavigate` for two purposes. First, we want to redirect to the first nested tab if no tab is selected. Second, we want to animate the tab left or right, depending on whether the new tab's index is less than or greater than its previous index.
+
+```typescript
+export abstract class TabGroup extends Component implements IRouted
+{
+    @Exclude() router: Router = new Router (this)
+    @Exclude() routeName!: string   
+
+    attached() {
+        for (var k of this.childrenKeys()) {
+            this[k].router = new Router (this[k])
+            this[k].routeName = k
+        }
+    } 
+
+    async beforeNavigate (childPath: string) {
+        const kids = this.childrenKeys()
+        if (childPath == '') {
+            this.router.navigate (this.router.currentChildComponent ? this.router.currentChildName : kids[0])
+            return false
+        }
+
+        this.slideForward = kids.indexOf (childPath) > kids.indexOf (this.router.currentChildName)
+        return true
+    }
+```
+[play](https://stackblitz.com/edit/pickle-samples?file=app%2FtabSample.ts)
+
+We return `false` when we want to cancel a navigation, and `true` when we're happy that the navigation goes ahead. The `beforeNavigate` method works very well in tandum with validation, that we discussed earlier. If your current state isn't valid, it's very common to prevent the navigation occuring by returning `false`.
+
+We can now use `TabGroup` as follows:
+
+```typescript
+export class TabSample extends TabGroup
+{  
+    apple = new MyTabContent ("Apples are delicious")
+    banana = new MyTabContent ("But bananas are ok")
+    cantaloupe = new MyTabContent ("Cantaloupe that's what I'm talking about.")
+}
+```
+
+## Navigation Links
+
+For convenience, `router` has a function for generating navigation links. These look like ordinary url links, but they use the `onclick` event to ensure the router's navigation method is called, rather than jumping to a new page:
+
+```typescript
+navigateLink (path: string, ...content: HValue[])
+```
+
+# Child-To-Parent Communication
+
+Use composition to manage complexity: as your application grows, parent components compose children into larger units of functionality. However, sometimes communication has to go in the reverse direction: from child to parent. This is done in one of three ways:
+
+* Callbacks
+* Parent Interface
+* Update Path
+
+With all of these approaches, the single-source-of-truth is always maintained. Avoid copying state.
+
+## Callback Communication
+
+With this approach, the parent passes a callback to the child:
+
+```typescript
+class ParentComponent extends Component {
+    @Type (() => ChildComponent) child: ChildComponent
+    view () {
+        return (
+            ...
+            child.view (() => this.updateSomeValue())
+            ...
+        )
+    }    
+}
+
+class ChildComponent extends Component {
+    ...
+    view (updateSomeValue?: () => void) : VElement { 
+        ...
+    }
+}
+```
+It's worth repeating that you should only use a child component if the child component has its *own* state. If not, save yourself some typing and replace your child component with a function that returns a `VElement`.
+
+### todoMVC
+
+In this sample, we use the callback pattern, both when factoring out a child component (`taskItem`), and factoring out a function that returns a view (`linkListView`):
+
+[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Ftodos.ts)
+
+Note that a small design restriction is that the arguments to `view` must be optional to support the parameterless super class `view`.
+
+## Parent Interface Communication
+
+With this pattern:
+
+1. The parent component implements an interface for exposing only the state your child needs to see
+2. The child component has a method that returns this.parent cast to the parent interface
+
+So the code structure is as follows:
+
+```typescript
+interface IParent {
+    someMethod() : SomeType	
+}
+
+class ParentComponent extends Component implements IParent {
+    someMethod() { return ... }
+    ...
+}
+
+class ChildComponent extends Component {
+    iparent() { return <IParent>this.parent }
+    ...
+}
+```
+The purpose of the interface is to reduce the surface area of the parent that the child can see, so that you can more easily reason about your code.
+
+You may also use the `Component`'s `root()`, or `branch()` API (explained in the API section further below) to target a specific ancestor, rather than the immediate parent.
+
+It's almost always a bad idea to access a sibling component. Instead, the child should access the parent, and the parent should interact with the other child.
+
+We highly recommend you install the `circular-dependency-plugin` package, and run it as part of your build process. Keep your cyclomatic complexity low!
+
+## Update Communication
+
+All state changes to `Component` trigger its `updated` method:
+
+```typescript
+   updated (payload: any) {
+      ...
+   }
+```
+The `updated` method will be subsequently called on each parent through the root. This allows a parent to respond tp updates made by its children, without having to handle specific callbacks.
+
+The `payload` property contains any data associated with the update. The `source` property will be set to component that `update` was called on, which is occasionally useful.
+
+# Interacting with the DOM
+
+## onRefreshed
+
+You may call `Component.onRefreshed` to queue a callback to perform DOM side effects after the next refresh. You typically do so in the `view` method:
 
 ```typescript
    view() {
@@ -484,478 +967,6 @@ Notice that the `update` occurs *after* the asynchronous operation has completed
 Both the `Validator` and `Router`, covered in their own sections, are designed to operate asynchronously.
 
 The samples demonstrate calling github's search, with debouncing.
-
-# Forms
-
-To make writing forms easier, pickle provides some widget functions for common inputs. You can easily build your own ones by examining the widgets source code.
-
-* `inputText` : text input
-* `inputNumber` : numeric input
-* `inputValue` : restricted input - use to make custom inputs such as `percentInput` or `currencyInput`
-* `inputTextArea` : text area input
-* `inputRange` : numeric range input
-* `selector` : select input
-* `radioGroup` : group of labelled radio buttons
-* `checkbox` : labelled checkbox
-
-The input functions are css agnostic - you can precisely control an input's attributes and nested element attributes.
-
-In this example, we write a BMI component with two sliders:
-
-```typescript
-export class BMI extends Component
-{
-    height = 180
-    weight = 80
-
-    calc () {
-        return this.weight / (this.height * this.height / 10000)
-    }
-
-    view () : VElement {       
-        return div (             
-            div (
-                "height",
-                inputRange ({target: this, prop: () => this.height, attrs: { min: 100, max: 250, step: 1 } }),
-                this.height
-            ),
-            div (
-                "weight",
-                inputRange ({target: this, prop: () => this.height, attrs: { min: 100, max: 250, step: 1 } })
-                this.weight
-            ),
-            div ("bmi: " + this.calc())
-        )
-    }
-}
-```
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fbmi.ts)
-
-All inputs are databound, and all take a single parameter. That parameter always inherits from the base class `InputProps<T>`:
-
-```typescript
-export interface InputProps<T> { // T is the data type to bind to (e.g. a number)
-    target: Component, // component to bind to
-    prop: PropertyRef<T>, // property on target, in either typed or untyped form, e.g. `() => this.firstName` or `firstName`
-    attrs?: HAttributes // the attributes for the input
-}
-```
-Minimially, all inputs will have an `attrs` type. More complex input types have many other properties. Some of these properties specify nested attribues. You can use the `mergeNestedAttrs` helper function to merge together several objects, where any properties on those objects whose name ends with `attrs` will have their attributes and styles merged, rather than overwritten. This makes it much easier to write reusable input functions.
-
-In the above example, there's clearly boilerplate. In the next section, you'll notice you can easily write your own `inputUnit` higher-level function that generalizes the concept of an input with a label and validation.
-
-## Validation
-
-The pickle library comes with a validator.
-
-The pickle validator builds on the excellent `class-validator` library to validate with javascript decorators. Here's an example of validating some properties on a component:
-
-```typescript
-export class ValidationSample extends MyForm implements IValidated
-{     
-    @Exclude() validator: Validator = new Validator (this)
-    
-    @Label("Your User Name") @MinLength(3) @MaxLength(10) @IsNotEmpty()  username?: string
-    @Min(0) @Max(10)                                                     rating? number
-    @IsNumber()                                                          bonus? number
-
-    ok() {
-        this.validator.validateThenUpdate()
-    }
-
-    updated (payload: any) {
-        if (this.validator.wasValidated)
-            this.validator.validateThenUpdate (payload)  
-    }
-
-    view () : VElement {           
-        return div (  
-            inputUnit (this, () => this.username, props => inputText (props)),
-            inputUnit (this, () => this.rating, props => inputNumber (props),
-            inputUnit (this, () => this.bonus, props => inputCurrency (props)),
-            div (
-                myButton ({ onclick: () => this.ok() }, "ok")
-            )
-        )       
-    }
-}
-```
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fvalidation.ts)
-
-By decorating class properties, you can express constraints, as well as custom labels to be used for display and validation.
-
-When you're ready to validate (in this case because the user clicked 'ok'), you call the `validator`'s `validateThenUpdate` method. This compares the component's properties to the constraints on those properties. When complete, the `validationErrors` property on the `validator` will contain an element for each property with constraint violations.
-
-We use the `component`'s update method to keep validated after we've first validated, to give the user continuous feedback. We can also manually flip `wasValidated` back to false.
-
-Validation works recursively for child components that also implement `IValidated`.
-
-### Asynchronous Validation
-
-Validation can be asynchronous, since you'll sometimes need to call a service to determine validity.
-
-```typescript
-class ValidationSample extends Component implements IValidated
-{
-    async customValidationErrors() {
-        ...
-    }
-}
-```
-The return type is `Promise<ValidationError[]>`, where `ValidationError` is a a type from the `class-validator` package.
-
-# 'this' Rules
-
-The `this` variable's binding is not as straightforward as in object oriented languages like C# and Java. There's a great article about [this here](https://github.com/Microsoft/TypeScript/wiki/'this'-in-TypeScript).
-
-Within pickle components, follow the pattern you see in this documentation, which has two rules:
-
-Always wrap a method that's used as a callback in a closure, otherwise `this` might be lost before it's bound.
-
-```typescript
-    // RIGHT
-    methodUsingYourCallback (e => this.updateProperty (e))
-    
-    // WRONG
-    methodUsingYourCallback (this.updateProperty)
-```
-Use ordinary class methods, not function members when calling update. Otherwise cloning — which pickle relies on for time travel — fails, since the cloned function will refer to the old object's this.
-
-```typescript
-    // RIGHT
-    add () {
-       return this.update (...
-
-    // WRONG
-    add = () =>
-        this.update (...
-```
-# HTML Helpers
-
-The HTML helpers take a spread of attribute objects, elements, and primitive values. Pickle has been designed to work well with Typescript, so your IDE can provide statement completion. In conjunction with `typestyle`, as we'll see later, we get a deep, clean static typing experience.
-
-Attribute objects go first. Some examples:
-
-```typescript
-div ()                                  // empty
-div ("hello")                           // primitive value
-div ({id: 1})                           // attribute
-div ({id: 1, class: "foo"})             // multiple attributes
-div ({id: 1}, "hello")                  // attribute followed by element
-div (div ())                            // nested elements
-div ({id: 1}, "hello", div("goodbye"))  // combination
-```
-Multiple attribute objects are merged. Merging attributes is really useful when writing functions allowing the caller to merge their own attributes in with yours. The following are equivalent:
-
-```typescript
-div ({id: 1}, {class:"foo"})
-div ({id: 1, class:"foo"})  
-```
-Event handlers are specified as simply a name followed by the handler:
-```
-button (
-    { onclick: () => this.add (1) }, "+"
-)
-```
-
-# Style
-
-While you can use ordinary css or scss files with pickle, pickle has first class support for [typestyle](https://github.com/typestyle/typestyle), that lets you write css in typescript.
-
-The key advantages are:
-
-* Typescript is far more powerful than any stylesheet language - it's a better way to organize and abstract your styles.
-* It eliminates the seam between your view functions and styles - easily pass in variables to dynamically modify styles.
-* You can colocate your code with your styles, or provide exactly the appropriate level of coupling to maximise maintainability.
-
-Here's what it looks like:
-
-```typescript
-div ({style: {color:'green' }}, 'pickle')
-```
-Pickle will call typestyle's `style` function on the object you provide. It's as if you called:
-
-```typescript
-div ({class: style ({color:'green'})}, 'pickle')
-```
-If you need to reuse a style, then don't inline the style: declare it as a variable and refer to it in your class attribute. You can factor it just as you please.
-
-Typestyle will dynamically create a small unique class name, and add css to the top of your page. So the following:
-
-```typescript
-div ({style: {color: 'green'} },
-    "pickle"
-)
-```
-Which will generate something like:
-
-```html
-<div class="fdwf33">
-    pickle
-</div>
-```
-With the following css:
-```css
-fdwf33 {
-    style: green;
-}
-```
-Pickle automatically combines css values. The following are equivalent:
-
-```typescript
-div ({class: "big"}, {class: "happy"})
-div ({class: "big happy"})
-```
-
-You may also use ordinary style strings rather than objects, which bypasses the typestyle library.
-
-## Important Gotcha
-
-Since style objects are actually converted into classes, they may not override other styles in other classes that apply to that element. If this is a issue either add the `!important` modifier to the style, or revert to a string style. You should however discover that with typestyle you have less need to use the `!important` modifier in the first place as you can better abstract your styles.
-
-# Routing
-
-The pickle library comes with a composable router.
-
-The samples use routing in two places. First, each sample has it's own route. Second, we use a router so that each tab in the "tabSample" has a nested route. So here's the possible routes:
-
-```
-/counter
-/bmi
-/tabSample/apple
-/tabSample/banana
-/tabSample/cantaloupe
-```
-
-Let's start with the outer router first. 
-
-```
-export class Samples extends Component implements IRouted
-{
-    @Exclude() router:Router = new Router (this)
-    @Exclude() routeName = ""
-
-    counter = new Counter ()
-    bmi = new BMI ()    
-    tabSample = new TabSample ()
-    ...
-    
-    attached()
-    {
-        for (var k of this.childrenKeys()) {
-            this[k].router = new Router(this[k])
-            this[k].routeName = k
-        }
-        ...
-    }
-}
-```
-A component can be routed by implementing `IRouted`. A routed component defines a `routeName` property that corresponds to a *name* in a *path*.
-
-So for the path `/tabSample/banana`, there's a component with the `tabSample` `routeName`, which has a child component with the `banana` `routeName`. The root component, `Samples` has an empty string for its routeName.
-
-A *current route* is represented with a component route's `currentChildName` value. So the `currentChildName` of the `Samples` component's router is `tabSamples`, and the `curentChildName` of the `TabSample` component's router is `banana`. Finally, the `currentChildName` of the `banana` component's router is simply ``, since it's a leaf node, i.e. itself has no children.
-
-By default, the mapping from parent and child name to child component occurs by scanning the parent for children and returning one that has a `routeName` that (case insensitively) matches the name provided. For complete control, you could implement the `childRoute` method to customize that default behaviour.
-
-## Navigation
-
-You can call a component router's `navigate` method, specifying the child path to go to. All routes are expressed *relatively*, not *absolutely*. In the examples below, we navigate to `banana`:
-
-```
-// when navigating from 'banana':
-this.router.navigate ('')
-
-// when navigating from 'tabSample':
-this.router.navigate ('banana')
-
-// when navigating from 'apple', via the parent
-this.router.parent.navigate ('banana')
-
-// when navigating from 'apple', via the root
-this.router.root.navigate ('tabSample/banana')
-```
-
-## Initialisation and Browser History
-
-Your first navigation typically occurs in the `attached` method of your root component. For example:
-    
-```
-export class Samples extends Component implements IRouted {
-    attached() {
-        ...
-        this.router.navigate (location.pathname)
-    }
-    ...
-}
-```
-The initial call to `navigate` on your root router is special in terms of navigation events:
-
-* History tracking begins
-  * This means from then on, actions such as the back and forward button on the browser will trigger navigation events.
-  * (The router internally uses the `history` api to update the browser history and to respond to browser navigation events.)
-* Navigation callbacks always run
-  * The `beforeNavigate` and `navigated` callbacks on your component, if present, will be called even if the current url is identical to the url navigated to.
-  * This is because before the initial navigation, it shouldn't be assumed that the application state reflects the current url.
-
-## Intercepting Navigation
-
-We can implement the `navigated` method to detect when a component is routed. We do this in the `Relativity` sample, where we have a continuous animation that we want to trigger when the component is routed:
-
-```typescript
-export class Relativity extends Component {
-    navigated() {
-        ...
-    }
-}
-```
-
-[play](https://stackblitz.com/edit/pickle-samples?file=app%2Frelativity.ts)
-
-`navigated` will be called for each component in the path.
-
-We intercept `navigate` by implementing `beforeNavigate`. It's important to be able to intercept navigation for several reasons:
-
- * Prevention: We don't want the user to leave the current form until it's validated, or perhaps we want to redirect the user to another route
- * Preparation: We need to fetch data, perhaps asynchronously, before we can complete the navigation.
- * Redirection: We want to redirect the user by canceling the current navigation and navigating to a new path.
-
-In the `TabGroup` component, we use `beforeNavigate` for two purposes. First, we want to redirect to the first nested tab if no tab is selected. Second, we want to animate the tab left or right, depending on whether the new tab's index is less than or greater than its previous index.
-
-```typescript
-export abstract class TabGroup extends Component implements IRouted
-{
-    @Exclude() router: Router = new Router (this)
-    @Exclude() routeName!: string   
-
-    attached() {
-        for (var k of this.childrenKeys()) {
-            this[k].router = new Router (this[k])
-            this[k].routeName = k
-        }
-    } 
-
-    async beforeNavigate (childPath: string) {
-        const kids = this.childrenKeys()
-        if (childPath == '') {
-            this.router.navigate (this.router.currentChildComponent ? this.router.currentChildName : kids[0])
-            return false
-        }
-
-        this.slideForward = kids.indexOf (childPath) > kids.indexOf (this.router.currentChildName)
-        return true
-    }
-```
-[play](https://stackblitz.com/edit/pickle-samples?file=app%2FtabSample.ts)
-
-We return `false` when we want to cancel a navigation, and `true` when we're happy that the navigation goes ahead. The `beforeNavigate` method works very well in tandum with validation, that we discussed earlier. If your current state isn't valid, it's very common to prevent the navigation occuring by returning `false`.
-
-We can now use `TabGroup` as follows:
-
-```typescript
-export class TabSample extends TabGroup
-{  
-    apple = new MyTabContent ("Apples are delicious")
-    banana = new MyTabContent ("But bananas are ok")
-    cantaloupe = new MyTabContent ("Cantaloupe that's what I'm talking about.")
-}
-```
-
-## Navigation Links
-
-For convenience, `router` has a function for generating navigation links. These look like ordinary url links, but they use the `onclick` event to ensure the router's navigation method is called, rather than jumping to a new page:
-
-```typescript
-navigateLink (path: string, ...content: HValue[])
-```
-
-# Child-To-Parent Communication
-
-Use composition to manage complexity: as your application grows, parent components compose children into larger units of functionality. However, sometimes communication has to go in the reverse direction: from child to parent. This is done in one of three ways:
-
-* Callbacks
-* Parent Interface
-* Update Path
-
-With all of these approaches, the single-source-of-truth is always maintained. Avoid copying state.
-
-## Callback Communication
-
-With this approach, the parent passes a callback to the child:
-
-```typescript
-class ParentComponent extends Component {
-    @Type (() => ChildComponent) child: ChildComponent
-    view () {
-        return (
-            ...
-            child.view (() => this.updateSomeValue())
-            ...
-        )
-    }    
-}
-
-class ChildComponent extends Component {
-    ...
-    view (updateSomeValue?: () => void) : VElement { 
-        ...
-    }
-}
-```
-It's worth repeating that you should only use a child component if the child component has its *own* state. If not, save yourself some typing and replace your child component with a function that returns a `VElement`.
-
-### todoMVC
-
-In this sample, we use the callback pattern, both when factoring out a child component (`taskItem`), and factoring out a function that returns a view (`linkListView`):
-
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Ftodos.ts)
-
-Note that a small design restriction is that the arguments to `view` must be optional to support the parameterless super class `view`.
-
-## Parent Interface Communication
-
-With this pattern:
-
-1. The parent component implements an interface for exposing only the state your child needs to see
-2. The child component has a method that returns this.parent cast to the parent interface
-
-So the code structure is as follows:
-
-```typescript
-interface IParent {
-    statefulMethod() : SomeType	
-}
-
-class ParentComponent extends Component implements IParent {
-    statefulMethod() { return ... }
-    ...
-}
-
-class ChildComponent extends Component {
-    iparent() { return <IParent>this.parent }
-    ...
-}
-```
-The purpose of the interface is to reduce the surface area of the parent that the child can see, so that you can more easily reason about your code.
-
-You may also use the `Component`'s `root()`, or `branch()` API (explained in the API section further below) to target a specific ancestor, rather than the immediate parent.
-
-It's almost always a bad idea to access a sibling component. Instead, the child should access the parent, and the parent should interact with the other child.
-
-We highly recommend you install the `circular-dependency-plugin` package, and run it as part of your build process. Keep your cyclomatic complexity low!
-
-## Update Communication
-
-All state changes to `Component` trigger its `updated` method:
-
-```typescript
-   updated (payload: any) {
-      ...
-   }
-```
-The `updated` method will be subsequently called on each parent through the root. This allows a parent to respond tp updates made by its children, without having to handle specific callbacks.
-
-The `payload` property contains any data associated with the update. The `source` property will be set to component that `update` was called on, which is occasionally useful.
 
 # API Reference
 

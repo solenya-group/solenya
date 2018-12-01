@@ -1,6 +1,6 @@
 import { Component } from './component'
 import { a, div, HAttributes, HValue, input, label, mergeAttrs, option, select, textarea } from './html'
-import { fuzzyEquals, getLabel, humanizeIdentifier, key, parseFloatDeNaN } from './util'
+import { fuzzyEquals, getLabel, humanizeIdentifier, key, parseFloatDeNaN, isNullOrEmpty } from './util'
 
 export type PropertyRef<T> = string | (() => T)
 
@@ -155,7 +155,7 @@ export function selector<T extends string|number|undefined> (
     const options = props.options || []
     const value = getBoundValue (props)
     const allOptions = ! props.hasEmpty ? options : [<SelectOption<T>>{value: undefined, label: ""}, ...options]
-    const id = (props.prefix || "") + getPropertyKey(props.prop) 
+    const id = prefixId (props.prefix, getPropertyKey(props.prop))
     const guideValue = ! options.length ? undefined : options[options.length-1].value
 
     return (
@@ -197,7 +197,7 @@ export interface RadioGroupProps<T> extends InputProps<T> {
 export function radioGroup<T extends string|number|undefined> (props: RadioGroupProps<T>)
 {
     const options = props.options || []
-    const id = (props.prefix || "") + getPropertyKey(props.prop) 
+    const id = prefixId (props.prefix, getPropertyKey (props.prop))
     return (
         div ({ id: id }, props.attrs,
             options.map(option => {
@@ -221,7 +221,7 @@ export function radioGroup<T extends string|number|undefined> (props: RadioGroup
                         value: "" + option.value,
                         name: id,
                         type: "radio",
-                        checked: checked ? "checked" : "",                        
+                        checked: checked ? "checked" : undefined,                        
                         onchange: e => setBoundValue (props,
                             typeify<T> (options[0].value, (<any>e.target).value)
                         ),
@@ -248,7 +248,7 @@ export interface CheckProps extends InputProps<boolean> {
 
 export function checkbox (props: CheckProps)
 {
-    const id = (props.prefix || "") + getPropertyKey(props.prop) 
+    const id = prefixId (props.prefix, getPropertyKey(props.prop))
 
     return (
         div (props.attrs,
@@ -272,6 +272,7 @@ export function checkbox (props: CheckProps)
         )
     )
 }
+
 export const inputTextArea = (props: InputEditorProps<string>) =>
     textarea ({
         oninput: e => setBoundValue (props, ((<HTMLTextAreaElement>e.target).value)),            
@@ -280,3 +281,6 @@ export const inputTextArea = (props: InputEditorProps<string>) =>
         props.attrs,
         getBoundValue (props)     
     )
+
+export const prefixId = (prefix: string|undefined, id: string) =>
+    (isNullOrEmpty (prefix) ? "" : prefix + "-") + id
