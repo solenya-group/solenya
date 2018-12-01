@@ -130,6 +130,9 @@ Pickle is small: see and understand the source code for yourself. Its power come
   * [Keep your component state small](#keep-your-component-state-small)
 - [Hot Module Reloading](#hot-module-reloading)
 - [Async](#async)
+- [Data Properties](#data-properties)
+  * [Data Keys](#data-keys)
+  * [Data Labels](#data-labels)
 - [API Reference](#api-reference)
   * [Component Class API](#component-class-api)
     * [Component View Members](#component-view-members)
@@ -967,6 +970,57 @@ Notice that the `update` occurs *after* the asynchronous operation has completed
 Both the `Validator` and `Router`, covered in their own sections, are designed to operate asynchronously.
 
 The samples demonstrate calling github's search, with debouncing.
+
+# Data Properties
+
+## Data Keys
+
+It's common for your components to have a mixture of properties representing your domain model, such as `firstName` or `phone`, and properties representing infrastructure, such as `validator` or `router`. You can programmatically get just the domain properties by calling a component's `dataKeys` property, which ignores all properties decorated with `@NonData`:
+
+```typescript
+class Animal extends Component
+{
+    @NonData() router?: Router = undefined
+    @NonData() validator?: Validator = undefined
+    species = ""
+    caloriesPerDay = NaN
+
+    view() {    
+        return div (this.dataKeys().join (",")) // species,caloriesPerDay
+    }
+}
+```
+You can think of `dataKeys` like `Object.getKeys`, but for data.
+
+The `Component` class's properties such as `app` and `parent` are decorated as `@NonData`. It's also very common for properties decorated with `@NonData` to also be decorated with `@Exclude`, since it's typically undesirable to serialize properties not part of the domain model.
+
+## Data Labels
+
+It's common to want display the name of a data property to the user. The `@Label` decorator can be used exactly for this purpose:
+
+```typescript
+class Animal extends Component
+{
+    @Label("Species") name = "Elephant"
+    caloriesPerDay = 70000
+
+    // prints:
+    // Species: Elephant
+    // Calories Per Day: 70000
+    view() {    
+        return div (
+            this.dataKeys().map (k =>
+                div (printProp (this, k))
+            )            
+    }
+}
+
+const printProp<T> (obj: any, prop: PropertyRef<T>) =>
+    getFriendlyName (obj, prop) + ": " + getPropertyValue (obj, prop))
+```
+`getFriendlyName` checks to see if there's a `@Label`, and if not, falls back to calling `humanizeIdentifier` on the property name. This means that by default, your users will see `Calories Per Day` instead of `caloriesPerDay` or `calories-per-day`.
+
+The validation sample referred to earlier shows how to hook up validation to use `@Label`.
 
 # API Reference
 
