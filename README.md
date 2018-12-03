@@ -1,8 +1,8 @@
-# Pickle?
+# Solenya
 
-Pickle is the web framework for you if you like **conceptual simplicity**. The heart of a pickle application is **your object model**. The pickle API lets you easily translate your object model to the DOM, the cloud, and local storage.  
+Solenya is the web framework for you if you like **conceptual simplicity**. The heart of a solenya application is **your object model**. The solenya API lets you easily translate your object model to the DOM, the cloud, and local storage.  
 
-![pickle flow diagram](pickle-architecture.png "Pickle Flow Diagram")
+![solenya flow diagram](solenya-architecture.png "Solenya Flow Diagram")
 
 To manage complexity in a web application, we split it into modular chunks. It's helpful to think of common types of chunks, or "components", in terms of their statefulness:
 
@@ -16,13 +16,13 @@ The immediate strategy, which is really a lack of strategy, or upside-down strat
 
 For this reason, many people eventually adopt the strategy of using a separate state management library. The problem here is that your type 1 component is fractured: there's the state management parts, the view parts, and then some boilerplate to connect the parts. Aside from being unpleasantly verbose, this hampers reusability.
 
-Pickle is designed for building high-level type '1' components. This means you can cleanly organise your application into meaningful, reusable, high-level chunks. So for example, you could have a component for a login, a component for a paged table, or a component for an address. And you can compose components to any scale: in fact your root component will represent your entire application.
+Solenya is designed for building high-level type '1' components. This means you can cleanly organise your application into meaningful, reusable, high-level chunks. So for example, you could have a component for a login, a component for a paged table, or a component for an address. And you can compose components to any scale: in fact your root component will represent your entire application.
 
-Each component's view is a pure function of its state, so within each component we get a high degree of separation of the application logic/state and the view. In fact, for any pickle application, you can strip out its views, and the core structure of the application remains in tact. Writing a component means thinking about its state and state transitions first, and its views second. This approach makes pickle components innately serializable. So another way to think about pickle components is that they represent the serializable parts of your application, that you might want to load and save from and to local storage or the server. Anyway, time to see some code.
+Each component's view is a pure function of its state, so within each component we get a high degree of separation of the application logic/state and the view. In fact, for any solenya application, you can strip out its views, and the core structure of the application remains in tact. Writing a component means thinking about its state and state transitions first, and its views second. This approach makes solenya components innately serializable. So another way to think about solenya components is that they represent the serializable parts of your application, that you might want to load and save from and to local storage or the server. Anyway, time to see some code.
 
 # First Code Sample
 
-Here's a counter component in pickle:
+Here's a counter component in solenya:
 
 ```typescript
 export class Counter extends Component
@@ -41,23 +41,22 @@ export class Counter extends Component
     }
 }
 ```
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fcounter.ts)
+[Play](https://stackblitz.com/edit/solenya-samples?file=app%2Fcounter.ts)
 
-In pickle, application state lives in your components — in this case `count`.
+In solenya, application state lives in your components — in this case `count`.
 
 Components can optionally implement a `view` method, which is a pure non side effecting function of the component's state. Views are rendered with a virtual DOM, such that the real DOM is efficiently patched with only the changes since the last update.
 
-Components update their state exclusively via the their `update` method, which will automatically refresh the view. It really is that simple. In fact, simplicity is the defining characteristic of pickle.
+Components update their state exclusively via the their `update` method, which will automatically refresh the view. It really is that simple. In fact, simplicity is the defining characteristic of solenya.
 
 # Samples
 
-* Live Demos: http://pickle-ts.com/
-* Live Editable Code Samples: https://stackblitz.com/edit/pickle-samples
-* Github Samples: https://github.com/pickle-ts/pickle-samples
+* Live Editable Code Samples: https://stackblitz.com/edit/solenya-samples
+* Github Samples: https://github.com/solenya-group/solenya-samples
 
 # Comparison Table
 
-Pickle simplifies many aspects of writing a web application.
+Solenya simplifies many aspects of writing a web application.
 
 | What | Simple Way | Complicated Way |
 |-|-|-|
@@ -73,14 +72,14 @@ Pickle simplifies many aspects of writing a web application.
 
 # Integration with Existing Libraries
 
-Pickle is small: see and understand the source code for yourself. Its power comes from its simplicity, and its integration as well as intended use with many other great libraries:
+Solenya is small: see and understand the source code for yourself. Its power comes from its simplicity, and its integration as well as intended use with many other great libraries:
 
  * A virtual DOM based on Ultradom *(forked)*
  * typestyle *(dependency)*
  * typescript & reflect-metadata for reflection *(dependency)*
  * class-tranformer for serialization *(dependency)*
- * class-validator is used by pickle validation *(dependency)*
- * mjackson/history is used by the pickle router *(dependency)*
+ * class-validator is used by solenya validation *(dependency)*
+ * mjackson/history is used by the solenya router *(dependency)*
  * any animation API using vdom hooks *(as in samples)*
  * any css framework like bootstrap *(as in samples)*
  * webpack for hot reloading *(as in samples)*
@@ -88,11 +87,11 @@ Pickle is small: see and understand the source code for yourself. Its power come
 
 # Installation
 
-`npm install pickle-ts`
+`npm install solenya`
 
 # Table of Contents
 
-- [Pickle](#pickle)
+- [Solenya](#solenya)
 - [First Code Sample](#first-code-sample)
 - [Samples](#samples)
 - [Comparison Table](#comparison-table)
@@ -145,19 +144,19 @@ Pickle is small: see and understand the source code for yourself. Its power come
   
 # State, View and Updates
 
-A pickle app outputs a virtual DOM node as a pure function of its state. On each update, the previous root virtual DOM node is compared with the new one, and the actual DOM is efficiently patched with the change. DOM events can trigger updates, which result in a view refresh, forming a cyclic relationship between the state and the view.
+A solenya app outputs a virtual DOM node as a pure function of its state. On each update, the previous root virtual DOM node is compared with the new one, and the actual DOM is efficiently patched with the change. DOM events can trigger updates, which result in a view refresh, forming a cyclic relationship between the state and the view.
 
 Components help you factor your app into reusable parts, or parts with separate concerns. An app has a reference to your root component.
 
 Components are designed to be serializable. When autosave or time travel is on, your component tree is serialized on each update. This provides a unified approach to time travel debugging, hot module reloading, transactions, and undo/redo. Serialization is covered in more detail in the serialization section.
 
-![pickle flow diagram](pickle-flow-diagram.png "Pickle Flow Diagram")
+![solenya flow diagram](solenya-flow-diagram.png "Solenya Flow Diagram")
 
 This flow diagram represents updating a GrandChild2 component. In this case, we have a very simple application, where the view tree mirrors the component tree. As an application gets larger, the view tree will typically only represent a subset of the component tree. For example, in an application with wizard steps, the component tree would probably have *every* wizard step, while the view tree would only have the *current* wizard step. 
 
 # Composition
 
-Composition is straightforward with `pickle`, allowing you to factor your application into a tree of smaller components:
+Composition is straightforward with `solenya`, allowing you to factor your application into a tree of smaller components:
 
 ```typescript
 export class TwinCounters extends Component
@@ -173,7 +172,7 @@ export class TwinCounters extends Component
     }
 }
 ```
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fcomposition.ts)
+[Play](https://stackblitz.com/edit/solenya-samples?file=app%2Fcomposition.ts)
 
 Components must have parameterless constructors, though they may include *optional* arguments. This small design restriction enables `class-transformer`'s deserializer to work.
 
@@ -188,7 +187,7 @@ export class Tree extends Component
     ...
 }
 ```
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Ftree.ts)
+[Play](https://stackblitz.com/edit/solenya-samples?file=app%2Ftree.ts)
 
 # Component Initialization
 
@@ -224,7 +223,7 @@ In more advanced scenarios you can capture updates, as explained later in the ch
 
 # Views
 
-Views are pure functions of state. Pickle uses a virtual DOM (forked from Ultradom) to efficiently update the actual DOM.
+Views are pure functions of state. Solenya uses a virtual DOM (forked from Ultradom) to efficiently update the actual DOM.
 
 You can add as may optional parameters as you want to your child component `View` methods. This makes it easy for parents to customize their children without their children needing extra state:
 
@@ -236,13 +235,13 @@ You can add as may optional parameters as you want to your child component `View
         )
     }
 ```
-`view` methods return the type `VElement`. However, your component might be faceless, having no view implementation, or might have several methods returning different `VElement` objects. This is because pickle components are state-centric, not view-centric.
+`view` methods return the type `VElement`. However, your component might be faceless, having no view implementation, or might have several methods returning different `VElement` objects. This is because solenya components are state-centric, not view-centric.
 
 To write a reusable view, your first approach should be to merely write a function that returns a `VElement`. Only use child components when you need to encapsulate state.
 
 # HTML Helpers
 
-The HTML helpers take a spread of attribute objects, elements, and primitive values. Pickle has been designed to work well with Typescript, so your IDE can provide statement completion. In conjunction with `typestyle`, as we'll see later, we get a deep, clean static typing experience.
+The HTML helpers take a spread of attribute objects, elements, and primitive values. Solenya has been designed to work well with Typescript, so your IDE can provide statement completion. In conjunction with `typestyle`, as we'll see later, we get a deep, clean static typing experience.
 
 Attribute objects go first. Some examples:
 
@@ -273,7 +272,7 @@ button (
 
 # Style
 
-While you can use ordinary css or scss files with pickle, pickle has first class support for [typestyle](https://github.com/typestyle/typestyle), that lets you write css in typescript.
+While you can use ordinary css or scss files with solenya, solenya has first class support for [typestyle](https://github.com/typestyle/typestyle), that lets you write css in typescript.
 
 The key advantages are:
 
@@ -284,12 +283,12 @@ The key advantages are:
 Here's what it looks like:
 
 ```typescript
-div ({style: {color:'green' }}, 'pickle')
+div ({style: {color:'green' }}, 'solenya')
 ```
-Pickle will call typestyle's `style` function on the object you provide. It's as if you called:
+Solenya will call typestyle's `style` function on the object you provide. It's as if you called:
 
 ```typescript
-div ({class: style ({color:'green'})}, 'pickle')
+div ({class: style ({color:'green'})}, 'solenya')
 ```
 If you need to reuse a style, then don't inline the style: declare it as a variable and refer to it in your class attribute. You can factor it just as you please.
 
@@ -297,14 +296,14 @@ Typestyle will dynamically create a small unique class name, and add css to the 
 
 ```typescript
 div ({style: {color: 'green'} },
-    "pickle"
+    "solenya"
 )
 ```
 Which will generate something like:
 
 ```html
 <div class="fdwf33">
-    pickle
+    solenya
 </div>
 ```
 With the following css:
@@ -313,7 +312,7 @@ fdwf33 {
     style: green;
 }
 ```
-Pickle automatically merges css values. The following are equivalent:
+Solenya automatically merges css values. The following are equivalent:
 
 ```typescript
 div ({class: "big"}, {class: "happy"})
@@ -328,7 +327,7 @@ Since style objects are actually converted into classes, they may not override o
 
 # Forms
 
-To make writing forms easier, pickle provides some widget functions for common inputs. You can easily build your own ones by examining the widgets source code.
+To make writing forms easier, solenya provides some widget functions for common inputs. You can easily build your own ones by examining the widgets source code.
 
 * `inputText` : text input
 * `inputNumber` : numeric input
@@ -370,7 +369,7 @@ export class BMI extends Component
     }
 }
 ```
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fbmi.ts)
+[Play](https://stackblitz.com/edit/solenya-samples?file=app%2Fbmi.ts)
 
 All inputs are databound, and all take a single parameter. That parameter always inherits from the base class `InputProps<T>`:
 
@@ -389,9 +388,9 @@ In the above example, there's clearly boilerplate. In the next section, you'll n
 
 ## Validation
 
-The pickle library comes with a validator.
+The solenya library comes with a validator.
 
-The pickle validator builds on the excellent `class-validator` library to validate with javascript decorators. Here's an example of validating some properties on a component:
+The solenya validator builds on the excellent `class-validator` library to validate with javascript decorators. Here's an example of validating some properties on a component:
 
 ```typescript
 export class ValidationSample extends MyForm implements IValidated
@@ -423,7 +422,7 @@ export class ValidationSample extends MyForm implements IValidated
     }
 }
 ```
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Fvalidation.ts)
+[Play](https://stackblitz.com/edit/solenya-samples?file=app%2Fvalidation.ts)
 
 By decorating class properties, you can express constraints, as well as custom labels to be used for display and validation.
 
@@ -451,7 +450,7 @@ The return type is `Promise<ValidationError[]>`, where `ValidationError` is a a 
 
 The `this` variable's binding is not as straightforward as in object oriented languages like C# and Java. There's a great article about [this here](https://github.com/Microsoft/TypeScript/wiki/'this'-in-TypeScript).
 
-Within pickle components, follow the pattern you see in this documentation, which has two rules:
+Within solenya components, follow the pattern you see in this documentation, which has two rules:
 
 Always wrap a method that's used as a callback in a closure, otherwise `this` might be lost before it's bound.
 
@@ -462,7 +461,7 @@ Always wrap a method that's used as a callback in a closure, otherwise `this` mi
     // WRONG
     methodUsingYourCallback (this.updateProperty)
 ```
-Use ordinary class methods, not function members when calling update. Otherwise cloning — which pickle relies on for time travel — fails, since the cloned function will refer to the old object's this.
+Use ordinary class methods, not function members when calling update. Otherwise cloning — which solenya relies on for time travel — fails, since the cloned function will refer to the old object's this.
 
 ```typescript
     // RIGHT
@@ -476,7 +475,7 @@ Use ordinary class methods, not function members when calling update. Otherwise 
 
 # Routing
 
-The pickle library comes with a composable router.
+The solenya library comes with a composable router.
 
 The samples use routing in two places. First, each sample has it's own route. Second, we use a router so that each tab in the "tabSample" has a nested route. So here's the possible routes:
 
@@ -571,7 +570,7 @@ export class Relativity extends Component {
 }
 ```
 
-[play](https://stackblitz.com/edit/pickle-samples?file=app%2Frelativity.ts)
+[play](https://stackblitz.com/edit/solenya-samples?file=app%2Frelativity.ts)
 
 `navigated` will be called for each component in the path.
 
@@ -607,7 +606,7 @@ export abstract class TabGroup extends Component implements IRouted
         return true
     }
 ```
-[play](https://stackblitz.com/edit/pickle-samples?file=app%2FtabSample.ts)
+[play](https://stackblitz.com/edit/solenya-samples?file=app%2FtabSample.ts)
 
 We return `false` when we want to cancel a navigation, and `true` when we're happy that the navigation goes ahead. The `beforeNavigate` method works very well in tandum with validation, that we discussed earlier. If your current state isn't valid, it's very common to prevent the navigation occuring by returning `false`.
 
@@ -669,7 +668,7 @@ It's worth repeating that you should only use a child component if the child com
 
 In this sample, we use the callback pattern, both when factoring out a child component (`taskItem`), and factoring out a function that returns a view (`linkListView`):
 
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2Ftodos.ts)
+[Play](https://stackblitz.com/edit/solenya-samples?file=app%2Ftodos.ts)
 
 Note that a small design restriction is that the arguments to `view` must be optional to support the parameterless super class `view`.
 
@@ -822,11 +821,11 @@ export function slideChildren () : VLifecycle
     } 
 }
 ```
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2FanimateList.ts)
+[Play](https://stackblitz.com/edit/solenya-samples?file=app%2FanimateList.ts)
 
-By design, these lifecycle events are not present on pickle components. Pickle components manage application state, only affecting DOM state via its `view` method, and the intentionally ungranular `onRefreshed` method. This lets you separate the very different lifecycles of application state and DOM state, making your code easier to maintain.
+By design, these lifecycle events are not present on solenya components. Solenya components manage application state, only affecting DOM state via its `view` method, and the intentionally ungranular `onRefreshed` method. This lets you separate the very different lifecycles of application state and DOM state, making your code easier to maintain.
 
-While there's always pragmatic exceptions, the principles of pickle state are:
+While there's always pragmatic exceptions, the principles of solenya state are:
 
  * Application state belongs on components.
  * DOM state belongs on DOM elements.
@@ -834,10 +833,10 @@ While there's always pragmatic exceptions, the principles of pickle state are:
 
 # App
 
-To start Pickle, pass the constructor of your top level component into your App instance, with a string defining the id of the element where you app will be hosted. For example:
+To start Solenya, pass the constructor of your top level component into your App instance, with a string defining the id of the element where you app will be hosted. For example:
 
 ```typescript
-import { App } from 'pickle-ts'
+import { App } from 'solenya'
 
 var app = new App (Counter, "app")
 ```
@@ -872,9 +871,9 @@ You can also use a predicate to seek a particular state:
 ```typescript
 time.seek(state => state.counter.count == 7)
 ```
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2FtimeTravel.ts)
+[Play](https://stackblitz.com/edit/solenya-samples?file=app%2FtimeTravel.ts)
 
-When time travel is on, pickle serializes the component tree on each update. It's efficient and mostly transparent, but make sure to read the serialization section.
+When time travel is on, solenya serializes the component tree on each update. It's efficient and mostly transparent, but make sure to read the serialization section.
 
 # Serialization
 
@@ -953,7 +952,7 @@ The `isVdomRendered` parameter tells the new app instance that there's already a
 
 # Async
 
-Pickle's update path is synchronous, so you perform aynchronous activites outside of update. Suppose a button invokes your submit event handler that calls a web service. That could be defined as follows: 
+Solenya's update path is synchronous, so you perform aynchronous activites outside of update. Suppose a button invokes your submit event handler that calls a web service. That could be defined as follows: 
 
 ```typescript
     async submit () {
@@ -963,7 +962,7 @@ Pickle's update path is synchronous, so you perform aynchronous activites outsid
         }
     }
 ```
-[Play](https://stackblitz.com/edit/pickle-samples?file=app%2FgitSearch.ts)
+[Play](https://stackblitz.com/edit/solenya-samples?file=app%2FgitSearch.ts)
 
 Notice that the `update` occurs *after* the asynchronous operation has completed.
 
@@ -1089,7 +1088,7 @@ children () : Component[]
 ### App Initialization Members
 ```typescript
 /**    
- * The entry point for a pickle app
+ * The entry point for a solenya app
  * @param rootComponentConstructor The parameterless constructor of the root component
  * @param containerId The element id to render the view, and local storage name
  * @param rootComponent Optionally, an existing instance of the root component
