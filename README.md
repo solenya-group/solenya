@@ -930,7 +930,7 @@ export class ItemList extends Component
 Avoid circular references unless you absolutely need them. Firstly, the serializer doesn't handle them, and secondly, it increases your cyclomatic complexity which is why some languages like F# deliberately force you to minimize them. However, occassionaly you'll need them. To do so:
 
 * override component's `attached` method to set the circular references there
-* exclude the circular references from being serialized with the `@Exclude()` decorator
+* exclude the circular references from being serialized with the `@transient` decorator
 
 ## Keep your component state small
 
@@ -974,13 +974,13 @@ The samples demonstrate calling github's search, with debouncing.
 
 ## Data Keys
 
-It's common for your components to have a mixture of properties representing your domain model, such as `firstName` or `phone`, and properties representing infrastructure, such as `validator` or `router`. You can programmatically get just the domain properties by calling a component's `dataKeys` property, which ignores all properties decorated with `@NonData`:
+It's common for your components to have a mixture of properties representing your domain model, such as `firstName` or `phone`, and properties representing infrastructure, such as `validator` or `router`. You can programmatically get just the domain properties by calling a component's `dataKeys` property, which ignores all properties decorated with `@transient`:
 
 ```typescript
 class Animal extends Component
 {
-    @NonData() router?: Router = undefined
-    @NonData() validator?: Validator = undefined
+    @transient router?: Router = undefined
+    @transient validator?: Validator = undefined
     species = ""
     caloriesPerDay = NaN
 
@@ -991,7 +991,9 @@ class Animal extends Component
 ```
 You can think of `dataKeys` like `Object.getKeys`, but for data.
 
-The `Component` class's properties such as `app` and `parent` are decorated as `@NonData`. It's also very common for properties decorated with `@NonData` to also be decorated with `@Exclude`, since it's typically undesirable to serialize properties not part of the domain model.
+The `Component` class's properties such as `app` and `parent` are decorated as `@transient`.
+
+`@transient` will automatically also decorate your property with `class-transformers`'s `@Exclude()` decorator, so that such properties don't partake in serialization.
 
 ## Data Labels
 

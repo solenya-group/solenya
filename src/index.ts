@@ -5,7 +5,7 @@ export { Storage } from './storage'
 export { Validator, IValidated } from './validation'
 export { Router, IRouted, pathHead, pathTail, combinePaths } from './router'
 export { VElement, VNode, VAttributes, VLifecycle, isVElement, createVElement, merge } from './dom'
-export { literal, isNullOrEmpty, key, Let, equalsIgnoreCase, isNonData, NonData, parseFloatDeNaN, fuzzyEquals, humanizeIdentifier, Label, getLabel } from './util'
+export { literal, isNullOrEmpty, key, Let, equalsIgnoreCase, isTransient, transient, parseFloatDeNaN, fuzzyEquals, humanizeIdentifier, Label, getLabel } from './util'
 export { mergeNestedAttrs, InputProps, DatabindProps, StringBinding, commandLink, inputText, inputNumber, inputValue, inputRange, radioGroup, RadioGroupProps, RadioOption, selector,
     getPropertyKey, PropertyRef, SelectorProps, SelectOption, numberToInputString, inputStringToNumber,
     InputEditorProps, getPropertyValue, setPropertyValue, getBoundValue, setBoundValue, checkbox, CheckProps, inputTextArea, getFriendlyName, prefixId } from './widgets'

@@ -1,18 +1,18 @@
-﻿import { App } from './app';
+﻿import { App } from './app'
 import { div } from './html'
 import { VElement } from './dom'
-import { NonData, isNonData } from './util'
+import { transient, isTransient } from './util'
 import { Exclude, Type } from 'class-transformer'
 
 export abstract class Component
 {
     /** The app associated with the component; undefined if not yet attached - use judiciously - main purpose is internal use by update method */
-    @NonData() @Exclude() app?: App
+    @transient app?: App
 
     /** The parent component; undefined if the root component - use judiciously - main purpose is internal use by update method */
-    @NonData() @Exclude() parent?: Component   
+    @transient parent?: Component   
 
-    @NonData() @Exclude() private refreshQueue: Function[] = []
+    @transient private refreshQueue: Function[] = []
 
     /** Called after construction, with a flag indicating if deserialization occured */
     attached (deserialized: boolean) {}
@@ -133,8 +133,8 @@ export abstract class Component
 
     /** Auto generates class-transformer's @Type decorators to properties that are components. */
     initDecorators() {
-         for (var propName of this.childrenKeys()) {
-            const propValue = this[propName]            
+         for (var propName of this.childrenKeys().filter(k => ! isTransient (this, k))) {            
+            const propValue = this[propName]     
             propValue.initDecorators()            
             Type (() => propValue.constructor)(this, propName)
         }
@@ -144,6 +144,6 @@ export abstract class Component
      * where you can black-list properties that aren't part of your domain. The properties on the Component base class are
      * marked with @NonData(). @NonData() is often used in conjuction with @Exclude() */
     dataKeys() {
-        return Object.keys (this).filter(k => ! isNonData (this, k))
+        return Object.keys (this).filter(k => ! isTransient (this, k))
     }
 }

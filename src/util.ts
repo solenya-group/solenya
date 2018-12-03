@@ -1,6 +1,7 @@
 ﻿import 'reflect-metadata'
-import { PropertyRef } from '.';
-import { getPropertyKey } from './widgets';
+import { PropertyRef } from '.'
+import { getPropertyKey } from './widgets'
+import { Exclude } from "class-transformer"
 
 export function key (propertyAccess: () => any) {
     return (""+propertyAccess).match (/\.([a-zA-Z_$][0-9a-zA-Z_$]*)[^\.]*$/)![1]
@@ -35,12 +36,14 @@ export function isNullOrEmpty (s?: string | null) {
     return s == null || s === ''
 }
 
-export function NonData() {
-    return Reflect.metadata("nonData", true);
+/** Decorate for properties that are not part of your domain model and should not be serialized.  */
+export function transient (target: Object, propertyKey: string) {
+    Reflect.metadata ("transient", true)(target, propertyKey)
+    Exclude()(target, propertyKey)
 }
 
-export function isNonData(target: any, propertyKey: string) {    
-    return Reflect.getMetadata("nonData", target, propertyKey);
+export function isTransient (target: any, propertyKey: string) {    
+    return Reflect.getMetadata("transient", target, propertyKey);
 }
 
 export function Label (s: string) {

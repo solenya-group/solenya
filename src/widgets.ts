@@ -16,12 +16,10 @@ export const getPropertyValue = <T> (obj: any, prop: PropertyRef<T>) =>
 export const setPropertyValue = <T> (obj: any, prop: PropertyRef<T>, value: T) =>
 {    
     const key = getPropertyKey (prop)
-    obj.update (() =>
-        {            
-            obj[key] = value
-        },
-        {key: key, value: value}
-    )
+    if (obj instanceof Component)
+        obj.update (() => { obj[key] = value }, {key, value})
+    else
+        obj[key] = value
 }
 
 export const getBoundValue = <T> (binding: DatabindProps<T>) =>
@@ -70,18 +68,17 @@ export interface InputProps<T> extends DatabindProps<T>
 }
 
 export const inputValue = <T extends string|number|undefined> (props: InputValueProps<T>) =>
-    input (
-        {
-            value: props.modelToInputString (getBoundValue (props), ""),
-            oninput: e =>
-                setBoundValue (props, 
-                    props.inputStringToModel (
-                        (<HTMLInputElement>e.target).value,
-                        getBoundValue (props)
-                    )
-            ),
-            onUpdated: (el: HTMLInputElement) =>
-                el.value = props.modelToInputString (getBoundValue (props), el.value)
+    input ({
+        value: props.modelToInputString (getBoundValue (props), ""),
+        oninput: e =>
+            setBoundValue (props, 
+                props.inputStringToModel (
+                    (<HTMLInputElement>e.target).value,
+                    getBoundValue (props)
+                )
+        ),
+        onUpdated: (el: HTMLInputElement) =>
+            el.value = props.modelToInputString (getBoundValue (props), el.value)
         },
         props.attrs
     )  
@@ -123,14 +120,13 @@ export const inputRange = (props: InputRangeProps) =>
 {
     const onchange = (e: Event) => setBoundValue (props, parseFloatDeNaN ((<HTMLInputElement>e.target).value))
 
-    return input (
-        {
-            type: "range",           
-            value: getBoundValue (props),
-            oninput: onchange,
-            onchange: onchange,
-            onUpdated: (el: HTMLInputElement) => { el.value = getBoundValue (props) }
-        },
+    return input ({
+        type: "range",           
+        value: getBoundValue (props),
+        oninput: onchange,
+        onchange: onchange,
+        onUpdated: (el: HTMLInputElement) => { el.value = getBoundValue (props) }
+    },
         props.attrs
     )
 }
@@ -252,20 +248,19 @@ export function checkbox (props: CheckProps)
 
     return (
         div (props.attrs,
-            input (                
-                {
-                    id: id,
-                    value: "" + getBoundValue (props),
-                    type: "checkbox",
-                    name: id,
-                    checked: getBoundValue (props) ? "checked" : undefined,
-                    onchange: () => {
-                        setBoundValue (props, ! getBoundValue (props))
-                    },
-                    onUpdated: el => {                              
-                        (<HTMLInputElement>el).checked = el.getAttribute ("checked") == "checked"
-                    }
+            input ({
+                id: id,
+                value: "" + getBoundValue (props),
+                type: "checkbox",
+                name: id,
+                checked: getBoundValue (props) ? "checked" : undefined,
+                onchange: () => {
+                    setBoundValue (props, ! getBoundValue (props))
                 },
+                onUpdated: el => {                              
+                    (<HTMLInputElement>el).checked = el.getAttribute ("checked") == "checked"
+                }
+            },
                 props.inputAttrs,
             ),
             label ({ for: id }, props.labelAttrs, props.label || getFriendlyName (props.target, props.prop))
