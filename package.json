@@ -1,6 +1,6 @@
 {
   "name": "solenya",
-  "version": "1.2.2",
+  "version": "1.2.5",
   "author": "solenya",
   "license": "MIT",
   "repository": {
@@ -9,22 +9,11 @@
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "devDependencies": {
-    "typescript": "^3.0.0",
-    "@types/history": "^4.7.0"
-  },
   "peerDependencies": {
     "reflect-metadata": "^0.1.12",
     "class-transformer": "^0.2.0",
     "class-validator": "^0.9.1",
     "history": "^4.7.2",
-    "typestyle": "^2.0.1"
-  },
-  "dependencies": {
-    "class-transformer": "^0.2.0",
-    "class-validator": "^0.9.1",
-    "history": "^4.7.2",
-    "reflect-metadata": "^0.1.12",
     "typestyle": "^2.0.1"
   }
 }

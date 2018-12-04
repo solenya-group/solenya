@@ -5,4 +5,3 @@ src/*.map
 src/*.map
 src/*.d.ts
 package-lock.json
-dist

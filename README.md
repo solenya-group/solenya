@@ -261,7 +261,7 @@ div ({id: 1}, {class:"foo"})
 div ({id: 1, class:"foo"})  
 ```
 
-All the HTML element helper functions such as `div` and `span`, call through to the `h` function. the `h` function merges multiple attribute objects using the `mergeAttrs` method, which you can also directly call yourself.
+All the HTML element helper functions such as `div` and `span`, call through to the `h` function. The `h` function merges multiple attribute objects using the `mergeAttrs` method, which you can also directly call yourself.
 
 Event handlers are specified as simply a name followed by the handler:
 ```
@@ -395,7 +395,7 @@ The solenya validator builds on the excellent `class-validator` library to valid
 ```typescript
 export class ValidationSample extends MyForm implements IValidated
 {     
-    @Exclude() validator: Validator = new Validator (this)
+    @transient validator: Validator = new Validator (this)
     
     @Label("Your User Name") @MinLength(3) @MaxLength(10) @IsNotEmpty()  username?: string
     @Min(0) @Max(10)                                                     rating? number
@@ -492,8 +492,8 @@ Let's start with the outer router first.
 ```
 export class Samples extends Component implements IRouted
 {
-    @Exclude() router:Router = new Router (this)
-    @Exclude() routeName = ""
+    @transient router:Router = new Router (this)
+    @transient routeName = ""
 
     counter = new Counter ()
     bmi = new BMI ()    
@@ -585,8 +585,8 @@ In the `TabGroup` component, we use `beforeNavigate` for two purposes. First, we
 ```typescript
 export abstract class TabGroup extends Component implements IRouted
 {
-    @Exclude() router: Router = new Router (this)
-    @Exclude() routeName!: string   
+    @transient router: Router = new Router (this)
+    @transient routeName!: string   
 
     attached() {
         for (var k of this.childrenKeys()) {
@@ -791,7 +791,7 @@ Let's combine the concepts in the previous sections to shuffle an array, where e
 ```typescript
 export class AnimateListExample extends Component
 {
-    @Exclude() items = range (1, 20)
+    @transient items = range (1, 20)
 
     view () {        
         return div(
@@ -934,7 +934,7 @@ Avoid circular references unless you absolutely need them. Firstly, the serializ
 
 ## Keep your component state small
 
-As a general rule, don't gratuitously use component state, and instead try to use pure functions where you can. In particular, avoid storing UI styles in component state - instead pass styles from a parent view down to child views. If you must store a UI style in a component, you'll probably want to decorate it with `@Exclude` to avoid serialization.
+As a general rule, don't gratuitously use component state, and instead try to use pure functions where you can. In particular, avoid storing UI styles in component state - instead pass styles from a parent view down to child views. If you must store a UI style in a component, you'll probably want to decorate it with `@transient` to avoid serialization.
 
 Serialization, deserialization, and local storage are surpisingly fast. However, efficiency is still important. Avoid properties with large immutable objects, and instead indirectly reference them with a key. For example, instead of directly storing a localisation table of French data on your component, you'd merely store the string "fr", and return the localisation table based on that key. Minimize the state on your components to that which you need to respond to user actions; keep it as close to a state machine as possible.
 
