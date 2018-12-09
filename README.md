@@ -68,7 +68,7 @@ In the following diagram, higher layers have a dependency on lower layers.
  * `class-validator` is used by the solenya validator
  * `class-tranformer` is used to serialize solenya components
  * `history` is used by the solenya router
- * *`web-animations-api` is used by the solenya-animation package, though you can also use any other 3rd party animation library
+ * *web-animations (polyfill: `web-animations-js`) is used by the solenya-animation package, though you can also use any other 3rd party animation library
 
 All dependencies between npm packages are **peer dependencies**.
 
