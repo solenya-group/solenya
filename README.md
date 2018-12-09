@@ -54,6 +54,30 @@ Components update their state exclusively via the their `update` method, which w
 * Live Editable Code Samples: https://stackblitz.com/edit/solenya-samples
 * Github Samples: https://github.com/solenya-group/solenya-samples
 
+# Dependencies
+
+Solenya is small: see and understand the source code for yourself. Its power comes from its simplicity, composability, and integration with other great libraries.
+
+In the following diagram, higher layers have a dependency on lower layers.
+
+![solenya flow diagram](solenya-layers.png "Solenya Layers")
+
+ The 3rd party libraries Solenya has a dependency on are:
+
+ * `typestyle` is used to express css styles in typescript
+ * `class-validator` is used by the solenya validator
+ * `class-tranformer` is used to serialize solenya components
+ * `history` is used by the solenya router
+ * *`web-animations-api` is used by the solenya-animation package, though you can also use any other 3rd party animation library
+
+All dependencies between npm packages are **peer dependencies**.
+
+# Installation
+
+`npm install solenya`
+
+Depending on your npm setup, you may have to explicitly install the peer dependencies listed above.
+
 # Comparison Table
 
 Solenya simplifies many aspects of writing a web application.
@@ -70,33 +94,14 @@ Solenya simplifies many aspects of writing a web application.
 | Async | Call any async function, then update component state synchronously | Either force synchronous actions where asynchronous actions are required, or force asynchronous actions when synchronous actions suffice (the latter is characteristic of functional reactive programming frameworks). |
 | Configuration | None | Custom file types, global configuration settings |
 
-# Integration with Existing Libraries
-
-Solenya is small: see and understand the source code for yourself. Its power comes from its simplicity, and its integration as well as intended use with many other great libraries:
-
- * A virtual DOM based on Ultradom *(forked)*
- * typestyle *(dependency)*
- * typescript & reflect-metadata for reflection *(dependency)*
- * class-tranformer for serialization *(dependency)*
- * class-validator is used by solenya validation *(dependency)*
- * mjackson/history is used by the solenya router *(dependency)*
- * any animation API using vdom hooks *(as in samples)*
- * any css framework like bootstrap *(as in samples)*
- * webpack for hot reloading *(as in samples)*
- * lodash for great utility functions like debouncing *(as in samples)*
-
-# Installation
-
-`npm install solenya`
-
 # Table of Contents
 
 - [Solenya](#solenya)
 - [First Code Sample](#first-code-sample)
 - [Samples](#samples)
-- [Comparison Table](#comparison-table)
-- [Integration with Existing Libraries](#integration-with-existing-libraries)
+- [Dependencies](#dependencies)
 - [Installation](#installation)
+- [Comparison Table](#comparison-table)
 - [State, View and Updates](#state-view-and-updates)
 - [Composition](#composition)
 - [Component Initialization](#component-initialization)
@@ -132,6 +137,7 @@ Solenya is small: see and understand the source code for yourself. Its power com
 - [Data Properties](#data-properties)
   * [Data Keys](#data-keys)
   * [Data Labels](#data-labels)
+- [Merging Attributes](#merging-attributes)
 - [API Reference](#api-reference)
   * [Component Class API](#component-class-api)
     * [Component View Members](#component-view-members)
@@ -382,7 +388,7 @@ export interface InputProps<T> { // T is the data type to bind to (e.g. a number
 ```
 The `target` and `prop` properties reference a component's property, enabling the input to be databound to that property. The `PropertyRef<T>` type can either take a function that refers to a property, such as `() => this.weight` or a ordinary string, e.g. `weight`. The former (statically typed) should be used when you know the property at compile time, and the latter (dynamically typed) should be used when you only know the property at runtime.
 
-Minimially, all inputs will have an optional `attrs` type. More complex input types have many other properties. Some of these properties specify nested attribues. You can use the `mergeAttrs` and `mergeNestedAttrs` helper functions to merge attributes. `mergeNestedAttrs` takes several objects, scans for properties on those objects whose name ends with `attrs`, and then calls through to `mergeAttrs` to merge those attributes and styles. This makes it much easier to write reusable and chainable helper functions.
+Minimially, all inputs will have an optional `attrs` type. More complex input types have many other properties, including nested attributes, which can be merged together as explained in the merging section.
 
 In the above example, there's clearly boilerplate. In the next section, you'll notice you can easily write your own `inputUnit` higher-level function that generalizes the concept of an input with a label and validation.
 
@@ -1023,6 +1029,45 @@ const printProp<T> (obj: any, prop: PropertyRef<T>) =>
 
 The validation sample referred to earlier shows how to hook up validation to use `@Label`.
 
+# Merging Attributes
+
+Solenya provides merging functions to make it easier to write reusable and chainable helper functions.
+
+By default, calling an element function prefixed with multiple attribute objects merges those attributes. For example:
+
+ ```typescript
+ div ({x:1}, {y:2})  // this
+ div ({x:1, y:2})    // becomes this
+ ```
+You can also use the `mergeAttrs` and `mergeNestedAttrs` helper functions to explicitly merge attributes. `mergeNestedAttrs` takes several objects, scans for properties on those objects whose name ends with `attrs`, and then calls through to `mergeAttrs` to merge those attributes and styles.
+
+Let's suppose we create a resuable `myInputText` that customises `inputText` as follows:
+
+```typescript
+export const myInputText = (props: InputEditorProps<string|undefined>) =>
+    inputText (mergeNestedAttrs (props, { attrs: {            
+        type: "text",
+        class: "form-control"
+    }}))
+```
+Calling:
+
+```typescript
+myInputText ({target: this, prop: () => this.email, attrs: {
+    type: "email",
+    class: "special"
+}})
+````
+Outputs:
+```html
+<input
+  type="email"
+  class="special form-control"
+   ...
+/>
+```
+Occasionally you'll get a merge collision. Solenya favors the attribute that comes first. This is the opposite behaviour of the spread operator, and for good reason: as a callee writing a reusable function you want the caller's attribute object to come first, take precedence, and drive type inference.
+
 # API Reference
 
 The `Component` and `App` APIs have been covered in earlier sections, and can also be understood through intellisense and the source code, but are included here to give a reference-oriented overview.
@@ -1062,9 +1107,6 @@ update (updater: () => void, payload: any = {})
 * @param payload Contains data associated with update - the update method will set the source property to 'this'
 */
 updated (payload: any) : void
-
-/** A convenient shortcut to update a component property; wraps property change in update */
-updateProperty (payload: KeyValue)
 ```
 
 ### Component Tree Members
