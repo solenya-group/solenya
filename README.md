@@ -90,9 +90,9 @@ Solenya simplifies many aspects of writing a web application.
 | Type Checking | Just use Typescript. Implicit testing, great tooling, and eased refactoring | Extra testing & tooling to compensate for not using static typing, and painful refactoring 
 | Rendering HTML | Just use typescript. No templating language required. You don't need a templating language if your programming language is expressive | Yet another templating language, with ad-hoc constructs reinventing language features for looping, conditionals, etc. lacking the consistency and generality of an actual programmming language. The root of the problem: embedding a programming language in structureless strings is inherently more complex than embedding structureless strings in a programming language.
 | CSS | Just use typescript. Style with `typestyle`. (Yes, you can also still easily reference ordinary css.) | Unmanageable stylesheets, where you can't easily rename, refactor, parameterize, etc. The root of the problem is your styles are expressed in a language that's simplistic and excessively decoupled from your view.
-| Paradigm | Use both functional and OO, using pure functions rather than side-effecting functions where possible | Only use the functional approach, even if it means turning walking into gymanastics. Reducers, higher-order-components, functional lensing, boilerplate 
+| Paradigm | Use both functional and OO, using pure functions rather than side-effecting functions where possible | Adhere to absolutes like mutation is always bad and tight coupling between data structures and functions is always bad, avoid with a combination of rampant DRY violations and convoluted write-only higher-order functions with captured state variables, then proclaim code "pure". 
 | Updating the DOM | Output a virtual DOM tree as a pure function of your object model | Manually manipulate the DOM on a case-by-case basis
-| Serialization | Intrinsic to design. Time travel debugging, hot module reloading, transactions, undo/redo all use the same single mechanism | Separate serialization library w/ bridge code to components
+| Serialization | Intrinsic to design. Time travel debugging, hot module reloading, transactions, undo/redo all use the same single mechanism | Components not innately serializable so write bridge code to separate set of serialzable objects.
 | Async | Call any async function, then update component state synchronously | Either force synchronous actions where asynchronous actions are required, or force asynchronous actions when synchronous actions suffice (the latter is characteristic of functional reactive programming frameworks). |
 | Configuration | None | Custom file types, global configuration settings |
 
@@ -794,7 +794,7 @@ If the key changes, the patcher now knows to definitely recreate that DOM elemen
 
 ## Animating a List
 
-Let's combine the concepts in the previous sections to shuffle an array, where each element gracefully moves to its new position each time the array is updated. We can use lodash's shuffle function to perform the `shuffle`, and our own `slideChildren` function to perform the animation. We'll need to make sure each item in the array has a unique `key`, so that the patcher knows to reuse each child element.
+Let's combine the concepts in the previous sections to shuffle an array, where each element gracefully moves to its new position each time the array is updated. We can use lodash's shuffle function to perform the `shuffle`, and our own `transitionChildren` function to perform the animation. We'll need to make sure each item in the array has a unique `key`, so that the patcher knows to reuse each child element.
 
 ```typescript
 export class AnimateListExample extends Component
@@ -804,7 +804,7 @@ export class AnimateListExample extends Component
     view () {        
         return div(
             myButton ({ onclick: () => this.shuffle () }, "shuffle"),       
-            ul (slideChildren(), this.items.map (n => li ({ key: n }, n)))
+            ul (transitionChildren(), this.items.map (n => li ({ key: n }, n)))
         )
     }
 
@@ -813,17 +813,17 @@ export class AnimateListExample extends Component
     }
 }
 ```
-We can implement `slideChildren` using the [FLIP](https://aerotwist.com/blog/flip-your-animations/) technique:
+We can implement `transitionChildren` using the [FLIP](https://aerotwist.com/blog/flip-your-animations/) technique:
 ```typescript
-export function slideChildren () : VLifecycle
+export function transitionChildren () : VLifecycle
 {
     return {                       
         onBeforeUpdate (el) {                
-            let els = el["state_slideChildren"] = Array.from(el.childNodes).map(c => (c as HTMLElement))
+            let els = el["state_transitionChildren"] = Array.from(el.childNodes).map(c => (c as HTMLElement))
             els.forEach (c => measure(c))
         },
         onUpdated (el) {
-            let els = el["state_slideChildren"] as HTMLElement[]
+            let els = el["state_transitionChildren"] as HTMLElement[]
             els.forEach (c => flip (c))
         }                    
     } 
