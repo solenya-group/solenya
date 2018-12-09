@@ -72,6 +72,8 @@ In the following diagram, higher layers have a dependency on lower layers.
 
 All dependencies between npm packages are **peer dependencies**.
 
+`Solenya` works with all major browsers, including IE11 if you install the `es6-shim`.
+
 # Installation
 
 `npm install solenya`
