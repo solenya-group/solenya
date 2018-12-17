@@ -20,6 +20,13 @@ Solenya is designed for building high-level type '1' components. This means you 
 
 Each component's view is a pure function of its state, so within each component we get a high degree of separation of the application logic/state and the view. In fact, for any solenya application, you can strip out its views, and the core structure of the application remains in tact. Writing a component means thinking about its state and state transitions first, and its views second. This approach makes solenya components innately serializable. So another way to think about solenya components is that they represent the serializable parts of your application, that you might want to load and save from and to local storage or the server. Anyway, time to see some code.
 
+# Samples
+
+* Live editable samples for learning solenya: https://stackblitz.com/edit/solenya-samples
+* Same code as above, should you want to download from github & run locally: https://github.com/solenya-group/solenya-samples
+* Live editable mix of solenya code snippets, experiments, and web apps: https://stackblitz.com/@solenya-group
+* Github / npm supplemental solenya libraries: https://github.com/solenya-group
+
 # First Code Sample
 
 Here's a counter component in solenya:
@@ -48,11 +55,6 @@ In solenya, application state lives in your components — in this case `count`.
 Components can optionally implement a `view` method, which is a pure non side effecting function of the component's state. Views are rendered with a virtual DOM, such that the real DOM is efficiently patched with only the changes since the last update.
 
 Components update their state exclusively via the their `update` method, which will automatically refresh the view. It really is that simple. In fact, simplicity is the defining characteristic of solenya.
-
-# Samples
-
-* Live Editable Code Samples: https://stackblitz.com/edit/solenya-samples
-* Github Samples: https://github.com/solenya-group/solenya-samples
 
 # Dependencies
 
@@ -99,8 +101,8 @@ Solenya simplifies many aspects of writing a web application.
 # Table of Contents
 
 - [Solenya](#solenya)
-- [First Code Sample](#first-code-sample)
 - [Samples](#samples)
+- [First Code Sample](#first-code-sample)
 - [Dependencies](#dependencies)
 - [Installation](#installation)
 - [Comparison Table](#comparison-table)
