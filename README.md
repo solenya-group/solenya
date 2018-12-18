@@ -1077,13 +1077,13 @@ Solenya, in part thanks to the excellent `typestyle` library, uses typescript to
 Due to habit and tradition, most people conduct web development in 3 different languages: Javascript for application code, HTML for UI, and CSS for styling. This slows development down immeasurably, due to:
 
 * Limited abstractions in the languages
-  * HTML and css are in reality used as impoverished unwieldy programming languages
-* Limitations inteoperating between languages
+  * HTML and CSS are in reality used as impoverished unwieldy programming languages
+* Limitations interoperating between languages
   * You can't for example parameterise some CSS style with an instance of a typescript class
 * Using multiple of anything, when a single thing will do
   * Especially when that thing is an entire language
 
-Typical approaches, rather than addressing the root of the problem, instead try to build yet more ad-hoc abstractions, with slightly-less-impoverished laguages on top of the impoverished languages. So you get yet-another-template language reinventing looping constructs, or a layer of top of CSS where we're thrilled we get a feature like... variables.
+Typical approaches, rather than addressing the root of the problem, instead try to build yet more ad-hoc abstractions, with slightly-less-impoverished languages on top of the impoverished languages. So you get yet-another-template language reinventing looping constructs, or a layer of top of CSS where we're thrilled we get a feature like... variables.
 
 ## Intrinsic State Management
 
