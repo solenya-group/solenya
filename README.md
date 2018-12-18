@@ -4,21 +4,7 @@ Solenya is the web framework for you if you like **conceptual simplicity**. The 
 
 ![solenya flow diagram](solenya-architecture.png "Solenya Flow Diagram")
 
-To manage complexity in a web application, we split it into modular chunks. It's helpful to think of common types of chunks, or "components", in terms of their statefulness:
-
-1) Objects with application state (i.e. a high level chunk of an application).
-2) Pure functions that return a view (i.e. a stateless virtual dom node)
-3) Objects with DOM state (i.e. essentially a web component)
- 
-Most web frameworks today focus on building components of type '2' and '3', but have a "figure it out yourself" stance when it comes to '1'. This lack of native support for type 1 components causes serious problems.
-
-The immediate strategy, which is really a lack of strategy, or upside-down strategy, is to use a type '3' component, an abstraction around an HTML DOM element, and then polute it with application logic. In code samples, and in small applications, we can get away with this dirty ad-hoc approach, but the approach doesn't scale.
-
-For this reason, many people eventually adopt the strategy of using a separate state management library. The problem here is that your type 1 component is fractured: there's the state management parts, the view parts, and then some boilerplate to connect the parts. Aside from being unpleasantly verbose, this hampers reusability.
-
-Solenya is designed for building high-level type '1' components. This means you can cleanly organise your application into meaningful, reusable, high-level chunks. So for example, you could have a component for a login, a component for a paged table, or a component for an address. And you can compose components to any scale: in fact your root component will represent your entire application.
-
-Each component's view is a pure function of its state, so within each component we get a high degree of separation of the application logic/state and the view. In fact, for any solenya application, you can strip out its views, and the core structure of the application remains in tact. Writing a component means thinking about its state and state transitions first, and its views second. This approach makes solenya components innately serializable. So another way to think about solenya components is that they represent the serializable parts of your application, that you might want to load and save from and to local storage or the server. Anyway, time to see some code.
+Here's the [motivation](#motivation) for Solenya. But if you just want to learn it, you can skip that and just keep reading.
 
 # Samples
 
@@ -26,6 +12,10 @@ Each component's view is a pure function of its state, so within each component 
 * Same code as above, should you want to download from github & run locally: https://github.com/solenya-group/solenya-samples
 * Live editable mix of solenya code snippets, experiments, and web apps: https://stackblitz.com/@solenya-group
 * Github / npm supplemental solenya libraries: https://github.com/solenya-group
+
+# Contact
+
+Open a github issue, or email codingbenjamin@gmail.com.
 
 # First Code Sample
 
@@ -82,30 +72,14 @@ All dependencies between npm packages are **peer dependencies**.
 
 Depending on your npm setup, you may have to explicitly install the peer dependencies listed above.
 
-# Comparison Table
-
-Solenya simplifies many aspects of writing a web application.
-
-| What | Simple Way | Complicated Way |
-|-|-|-|
-| State Management | Intrinsic to design | Separate state manager library w/ tons of boilerplate
-| Type Checking | Just use Typescript. Implicit testing, great tooling, and eased refactoring | Extra testing & tooling to compensate for not using static typing, and painful refactoring 
-| Rendering HTML | Just use typescript. No templating language required. You don't need a templating language if your programming language is expressive | Yet another templating language, with ad-hoc constructs reinventing language features for looping, conditionals, etc. lacking the consistency and generality of an actual programmming language. The root of the problem: embedding a programming language in structureless strings is inherently more complex than embedding structureless strings in a programming language.
-| CSS | Just use typescript. Style with `typestyle`. (Yes, you can also still easily reference ordinary css.) | Unmanageable stylesheets, where you can't easily rename, refactor, parameterize, etc. The root of the problem is your styles are expressed in a language that's simplistic and excessively decoupled from your view.
-| Paradigm | Use both functional and OO, using pure functions rather than side-effecting functions where possible | Adhere to absolutes like mutation is always bad and tight coupling between data structures and functions is always bad, avoid with a combination of rampant DRY violations and convoluted write-only higher-order functions with captured state variables, then proclaim code "pure". 
-| Updating the DOM | Output a virtual DOM tree as a pure function of your object model | Manually manipulate the DOM on a case-by-case basis
-| Serialization | Intrinsic to design. Time travel debugging, hot module reloading, transactions, undo/redo all use the same single mechanism | Components not innately serializable so write bridge code to separate set of serialzable objects.
-| Async | Call any async function, then update component state synchronously | Either force synchronous actions where asynchronous actions are required, or force asynchronous actions when synchronous actions suffice (the latter is characteristic of functional reactive programming frameworks). |
-| Configuration | None | Custom file types, global configuration settings |
-
 # Table of Contents
 
 - [Solenya](#solenya)
 - [Samples](#samples)
+- [Contact](#contact)
 - [First Code Sample](#first-code-sample)
 - [Dependencies](#dependencies)
 - [Installation](#installation)
-- [Comparison Table](#comparison-table)
 - [State, View and Updates](#state-view-and-updates)
 - [Composition](#composition)
 - [Component Initialization](#component-initialization)
@@ -142,6 +116,12 @@ Solenya simplifies many aspects of writing a web application.
   * [Data Keys](#data-keys)
   * [Data Labels](#data-labels)
 - [Merging Attributes](#merging-attributes)
+- [Motivation](#motivation)
+  * [Static Typing](#static-tying)
+  * [A Unified Language](#a-unified-language)
+  * [Intrinsic State Management](#intrinsic-state-management)
+  * [A Multi-Paradigm Approach](#a-multi-paradigm-approach)
+  * [Balanced Coupling](#balanced-coupling)
 - [API Reference](#api-reference)
   * [Component Class API](#component-class-api)
     * [Component View Members](#component-view-members)
@@ -1071,6 +1051,65 @@ Outputs:
 />
 ```
 Occasionally you'll get a merge collision. Solenya favors the attribute that comes first. This is the opposite behaviour of the spread operator, and for good reason: as a callee writing a reusable function you want the caller's attribute object to come first, take precedence, and drive type inference.
+
+# Motivation
+
+Solenya was built to simplify front end web development. At a philosophical level, it seeks to balance abstraction and pragmatism. More specifically, it features:
+
+* Static Typing
+* A Unified Language
+* Intrinsic State Management
+* A Multi-Paradigm Approach
+* Balanced Coupling
+
+## Static Typing
+
+Solenya was built from the ground-up to take advantage of static typing. 
+
+Writing large applications without static typing doesn't work. It's why Facebook had to write their own statically typed version of PHP. It's why Typescript exists. And the tax of static typing in modern languages is really low, thanks to type inference. There's no excuse for eschewing compile-time types.
+
+Static typing gives you: the best possible testing for free, where the compiler constrains the possible values of your variables. Great tooling. Free documentation. It makes other people's code much easier to understand. And it makes your own code easier to understand as and when you refactor it.
+
+## A Unified Language
+
+Solenya, in part thanks to the excellent `typestyle` library, uses typescript to express everything, including HTML and CSS. This substantially reduces complexity.
+
+Due to habit and tradition, most people conduct web development in 3 different languages: Javascript for application code, HTML for UI, and CSS for styling. This slows development down immeasurably, due to:
+
+* Limited abstractions in the languages
+  * HTML and css are in reality used as impoverished unwieldy programming languages
+* Limitations inteoperating between languages
+  * You can't for example parameterise some CSS style with an instance of a typescript class
+* Using multiple of anything, when a single thing will do
+  * Especially when that thing is an entire language
+
+Typical approaches, rather than addressing the root of the problem, instead try to build yet more ad-hoc abstractions, with slightly-less-impoverished laguages on top of the impoverished languages. So you get yet-another-template language reinventing looping constructs, or a layer of top of CSS where we're thrilled we get a feature like... variables.
+
+## Intrinsic State Management
+
+In Solenya, state management is intrinsic to the design.
+
+In comparison, it's standard practice for front end frameworks to leave this up to a separate state management library.
+
+The "big" front end frameworks don't even use a state management library in their default samples. So the de facto style for writing code in such frameworks excessively couples your application logic to your UI. You should write scalable code, whether it's a 5 minute sample or a real-world application.
+
+## A Multi-Paradigm Approach
+
+Languages like Typescript and F# do a brilliant job of leveraging both the OO and functional paradigms. Solenya, being written in and for Typescript, takes full advantage of this.
+
+Unfortunately, some of the alternatives to the big frameworks are anti-OO frameworks. Their tenets? That state mutation is always wrong. That coupling functions and data is always wrong. Yet their own code demonstrates rampant DRY violations and convoluted higher-order write-only functions. You know, the functions that return functions that return functions that return functions, where oh, yes, well the 2nd innermost function actually did store state. Good luck debugging that.
+
+## Balanced Coupling
+
+Programmers often fall into two camps: programmers who are unaware of how they're excessively coupling concerns, and then programmers whom realizing the failings of the former group, react by excessively decoupling code, whereby the same concern manifests across their code base as repetition and boilerplate.
+
+With front end frameworks, this most notable in their component models.
+
+At the one extreme of excessive high-coupling, we have a component  with hooks that correspond to DOM element events, such as being attached, updated and removed.
+
+At the other extreme of excessive loose-coupling, we have an object in a completely different realm, such as a redux object or cycle.js state object, which must communicate with a view via considerable indirection and boilerplate.
+
+Solenya hits the sweet spot. Solenya components have a view which returns a virtual DOM element, but the component's lifetime has no relation to a DOM element.
 
 # API Reference
 
