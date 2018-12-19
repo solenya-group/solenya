@@ -117,7 +117,7 @@ Depending on your npm setup, you may have to explicitly install the peer depende
   * [Data Labels](#data-labels)
 - [Merging Attributes](#merging-attributes)
 - [Motivation](#motivation)
-  * [Typescript for Everything](#typescript-for-everything)
+  * [Everything expressed in a single, powerful language](#everything-expressed-in-a-single-powerful-language)
   * [Intrinsic State Management](#intrinsic-state-management)
 - [API Reference](#api-reference)
   * [Component Class API](#component-class-api)
@@ -1053,25 +1053,25 @@ Occasionally you'll get a merge collision. Solenya favors the attribute that com
 
 Solenya was built to simplify front end web development. Its philosophy is to balance abstraction and pragmatism. More specifically, it features:
 
-* Typescript for Everything
+* Everything expressed in a single, powerful language
 * Intrinsic State Management
 
-## Typescript for Everything
+## Everything expressed in a single, powerful language
 
 Solenya, in part thanks to the excellent `typestyle` library, uses typescript to express everything, including HTML and CSS. This substantially reduces complexity.
 
-Due to habit and tradition, most people conduct web development in 3 different languages: Javascript for application code, HTML for UI, and CSS for styling. This slows development down immeasurably, due to:
+In comparison, most front end frameworks, despite putatively being "unified" development models, encourage development in 3 different languages: Javascript for application code, HTML for UI, and CSS for styling. This slows development down immeasurably, due to:
 
 * Limited abstractions in the languages
   * HTML and CSS are in reality used as impoverished unwieldy programming languages
-* Limitations interoperating between languages
+* Limited interop between languages
   * You can't for example parameterise some CSS style with an instance of a typescript class
 * Using multiple of anything, when a single thing will do
   * Especially when that thing is an entire language
 
-Typical approaches, rather than addressing the root of the problem, instead try to build yet more ad-hoc abstractions, with slightly-less-impoverished languages on top of the impoverished languages. So you get yet-another-template language reinventing looping constructs, or a layer of top of CSS where we're thrilled we get a feature like... variables.
+Rather than addressing the root of the problem, populist solutions appeal to developer tradition, doubling down on the flawed approach with more ad-hoc abstractions. "New" slightly-less-impoverished languages are built on top of the impoverished languages. Yet-another-template language reinventing looping constructs, or a layer of top of CSS where we're thrilled we get a feature like... variables.
 
-Another excuse for using 3 languages rather than 1 is the misnomer that this helps separate concerns. Separation of languages is not separation of concerns. In fact, the worst thing you can do if you care about separating concerns is to attempt to do so with a language lacking abstractions that make such separations possible. This is why css code bases (and scss) are littered with repetition, with invisible two-way dependencies with their accompanying code and HTML.
+Another excuse for using 3 languages rather than 1 is the misnomer that this helps separate concerns. Separation of languages != separation of concerns. In fact, the worst thing you can do if you care about separating concerns is to attempt to do so with a language lacking abstractions that make such separations possible. This is why css code bases (and scss) are littered with repetition, with tooling-invisible two-way dependencies with their accompanying code and HTML.
 
 ### Static Typing
 
@@ -1099,7 +1099,7 @@ Most web frameworks today focus on building components of type '2' and '3', not 
 
 The immediate strategy, which is really a lack of strategy, or upside-down strategy, is to use a type '3' component, an abstraction around an HTML DOM element, and then polute it with application logic. In code samples, and in small applications, we can get away with this dirty ad-hoc approach, but the approach doesn't scale.
 
-For this reason, many people eventually adopt the strategy of using a separate state management library to get their type '1' components. But now they've got two separate component models to deal with and integrate.
+For this reason, many people eventually adopt the strategy of using a separate state management library to get their type '1' components. But now you've got two separate component models to deal with and integrate.
 
 Solenya is designed from the start for building high-level type '1' components. This means you can cleanly organise your application into meaningful, reusable, high-level chunks. So for example, you could have a component for a login, a component for a paged table, or a component for an address. And you can compose components to any scale: in fact your root component will represent your entire application.
 
