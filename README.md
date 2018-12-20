@@ -117,6 +117,7 @@ Depending on your npm setup, you may have to explicitly install the peer depende
   * [Data Labels](#data-labels)
 - [Merging Attributes](#merging-attributes)
 - [Motivation](#motivation)
+  * [Simplicity](#Simplicity)
   * [Everything expressed in a single, powerful language](#everything-expressed-in-a-single-powerful-language)
   * [Intrinsic State Management](#intrinsic-state-management)
 - [API Reference](#api-reference)
@@ -1051,14 +1052,26 @@ Occasionally you'll get a merge collision. Solenya favors the attribute that com
 
 # Motivation
 
-Solenya was built to simplify front end web development. Its philosophy is to balance abstraction and pragmatism. More specifically, it features:
+## Simplicity
 
-* Everything expressed in a single, powerful language
-* Intrinsic State Management
+*Simplicity* is a deeply important quality of code, and as such, has become a superlative in programming. Superlatives work on us because we naturally want to believe great things about ourselves: *my* code is simple. But of course, *your* code is complicated, and now simplicity is not objective, but subjective. This subjectivity is exacerbated by the restricted environment of the coding islands we live on. Of course code can be simple when it ignores critical concerns of a larger world.
+
+But to abandon an objective meaning of 'simple' is to abandon being a good programmer, or to think so provincially that such meanings are never contemplated. Because the side-effects of complexity are costly code bases defended by programmers who's actual talent is politics.
+
+Something is 'simple' if it's smaller. A system that has 1 thing in it is simpler than a system that has 2 things in it. Simplicity must be coupled with Occam's razor - that out of several *comparably powerful* alternatives, we should pick the simplest one.
+
+Solenya is simple because it:
+
+ * Reduces the number or languages to get the job done
+ * Removes the need for an extra bolt-on state manager
+
+without sacrificing any power.
 
 ## Everything expressed in a single, powerful language
 
 Solenya, in part thanks to the excellent `typestyle` library, uses typescript to express everything, including HTML and CSS. This substantially reduces complexity.
+
+![Language Interop Complexity](language-interop-complexity.png "Language Interop Complexity")
 
 In comparison, most front end frameworks, despite putatively being "unified" development models, encourage development in 3 different languages: Javascript for application code, HTML for UI, and CSS for styling. This slows development down immeasurably, due to:
 
