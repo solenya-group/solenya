@@ -196,7 +196,7 @@ export function radioGroup<T extends string|number|undefined> (props: RadioGroup
     const id = prefixId (props.prefix, getPropertyKey (props.prop))
     return (
         div ({ id: id }, props.attrs,
-            options.map(option => {
+            ...options.map(option => {
                 const checked = fuzzyEquals (option.value, getBoundValue (props))
                 const optionId = id+"-"+option.value
                 return div (

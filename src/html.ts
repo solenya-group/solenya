@@ -1,12 +1,17 @@
 ﻿import { createVElement, VElement, VAttributes, VNode, VLifecycle, isVElement, merge } from './dom'
 import { combineLifecycles } from './lifecycle'
 import { style, types } from 'typestyle'
+import { NestedCSSProperties } from 'typestyle/lib/types'
+
+export type HAttributeValue = undefined | string | number | ((ev:any) => any) | NestedCSSProperties
 
 export interface HAttributes extends VAttributes, KnownHtmlAttributes {
-    [key: string] : any
+    [key: string] : HAttributeValue
 }
 
-export type HValue = VNode | HAttributes | null | undefined
+export type HValue = VNode | HAttributes | VLifecycle | null | undefined
+
+export type HValues = HValue | VNode[]
 
 function typeStyleize (attrs?: HAttributes) {        
     if (attrs && typeof (attrs.style) === 'object') {
@@ -36,7 +41,7 @@ function mergeAttrsMutate (dominant: HAttributes | undefined, recessive: HAttrib
     if (dominant.class && recessive.class)
         dominant.class = dominant.class + " " + recessive.class
 
-    dominant = combineLifecycles (dominant, recessive)
+    dominant = <HAttributes> combineLifecycles (dominant, recessive)
     dominant = <HAttributes> merge (dominant, recessive)                                 
 
     return dominant
@@ -46,15 +51,17 @@ function isAttribute (a?: any): a is HAttributes {
     return a != null && typeof a == "object" && ! isVElement(<any>a) && ! Array.isArray(a)
 }
 
-export function h (tag: string, ...values: HValue[]): VElement
+export function h (tag: string, ...values: HValues[]): VElement
 {
     var attrs: HAttributes | undefined
     while (values.length > 0) {
         var head = values[0]        
         if (isAttribute (head)) {
             attrs = mergeAttrsMutate (attrs, head)
-            values = values.slice(1)
+            values.shift()
         }
+        else if (head == null)
+            values.shift()
         else
             break
     }
@@ -62,407 +69,407 @@ export function h (tag: string, ...values: HValue[]): VElement
     return createVElement(tag, attrs || {}, ...values)        
 }
 
-export function a(...values: HValue[]) {
+export function a(...values: HValues[]) {
     return h("a", ...values)
 }
 
-export function abbr(...values: HValue[]) {
+export function abbr(...values: HValues[]) {
     return h("abbr", ...values)
 }
 
-export function address(...values: HValue[]) {
+export function address(...values: HValues[]) {
     return h("address", ...values)
 }
 
-export function area(...values: HValue[]) {
+export function area(...values: HValues[]) {
     return h("area", ...values)
 }
 
-export function article(...values: HValue[]) {
+export function article(...values: HValues[]) {
     return h("article", ...values)
 }
 
-export function aside(...values: HValue[]) {
+export function aside(...values: HValues[]) {
     return h("aside", ...values)
 }
 
-export function audio(...values: HValue[]) {
+export function audio(...values: HValues[]) {
     return h("audio", ...values)
 }
 
-export function b(...values: HValue[]) {
+export function b(...values: HValues[]) {
     return h("b", ...values)
 }
 
-export function bdi(...values: HValue[]) {
+export function bdi(...values: HValues[]) {
     return h("bdi", ...values)
 }
 
-export function bdo(...values: HValue[]) {
+export function bdo(...values: HValues[]) {
     return h("bdo", ...values)
 }
 
-export function blockquote(...values: HValue[]) {
+export function blockquote(...values: HValues[]) {
     return h("blockquote", ...values)
 }
 
-export function br(...values: HValue[]) {
+export function br(...values: HValues[]) {
     return h("br", ...values)
 }
 
-export function button(...values: HValue[]) {
+export function button(...values: HValues[]) {
     return h("button", ...values)
 }
 
-export function canvas(...values: HValue[]) {
+export function canvas(...values: HValues[]) {
     return h("canvas", ...values)
 }
 
-export function caption(...values: HValue[]) {
+export function caption(...values: HValues[]) {
     return h("caption", ...values)
 }
 
-export function cite(...values: HValue[]) {
+export function cite(...values: HValues[]) {
     return h("cite", ...values)
 }
 
-export function code(...values: HValue[]) {
+export function code(...values: HValues[]) {
     return h("code", ...values)
 }
 
-export function col(...values: HValue[]) {
+export function col(...values: HValues[]) {
     return h("col", ...values)
 }
 
-export function colgroup(...values: HValue[]) {
+export function colgroup(...values: HValues[]) {
     return h("colgroup", ...values)
 }
 
-export function data(...values: HValue[]) {
+export function data(...values: HValues[]) {
     return h("data", ...values)
 }
 
-export function datalist(...values: HValue[]) {
+export function datalist(...values: HValues[]) {
     return h("datalist", ...values)
 }
 
-export function dd(...values: HValue[]) {
+export function dd(...values: HValues[]) {
     return h("dd", ...values)
 }
 
-export function del(...values: HValue[]) {
+export function del(...values: HValues[]) {
     return h("del", ...values)
 }
 
-export function details(...values: HValue[]) {
+export function details(...values: HValues[]) {
     return h("details", ...values)
 }
 
-export function dfn(...values: HValue[]) {
+export function dfn(...values: HValues[]) {
     return h("dfn", ...values)
 }
 
-export function dialog(...values: HValue[]) {
+export function dialog(...values: HValues[]) {
     return h("dialog", ...values)
 }
 
-export function div(...values: HValue[]) {
+export function div(...values: HValues[]) {
     return h("div", ...values)
 }
 
-export function dl(...values: HValue[]) {
+export function dl(...values: HValues[]) {
     return h("dl", ...values)
 }
 
-export function dt(...values: HValue[]) {
+export function dt(...values: HValues[]) {
     return h("dt", ...values)
 }
 
-export function em(...values: HValue[]) {
+export function em(...values: HValues[]) {
     return h("em", ...values)
 }
 
-export function embed(...values: HValue[]) {
+export function embed(...values: HValues[]) {
     return h("embed", ...values)
 }
 
-export function fieldset(...values: HValue[]) {
+export function fieldset(...values: HValues[]) {
     return h("fieldset", ...values)
 }
 
-export function figcaption(...values: HValue[]) {
+export function figcaption(...values: HValues[]) {
     return h("figcaption", ...values)
 }
 
-export function figure(...values: HValue[]) {
+export function figure(...values: HValues[]) {
     return h("figure", ...values)
 }
 
-export function footer(...values: HValue[]) {
+export function footer(...values: HValues[]) {
     return h("footer", ...values)
 }
 
-export function form(...values: HValue[]) {
+export function form(...values: HValues[]) {
     return h("form", ...values)
 }
 
-export function h1(...values: HValue[]) {
+export function h1(...values: HValues[]) {
     return h("h1", ...values)
 }
 
-export function h2(...values: HValue[]) {
+export function h2(...values: HValues[]) {
     return h("h2", ...values)
 }
 
-export function h3(...values: HValue[]) {
+export function h3(...values: HValues[]) {
     return h("h3", ...values)
 }
 
-export function h4(...values: HValue[]) {
+export function h4(...values: HValues[]) {
     return h("h4", ...values)
 }
 
-export function h5(...values: HValue[]) {
+export function h5(...values: HValues[]) {
     return h("h5", ...values)
 }
 
-export function h6(...values: HValue[]) {
+export function h6(...values: HValues[]) {
     return h("h6", ...values)
 }
 
-export function header(...values: HValue[]) {
+export function header(...values: HValues[]) {
     return h("header", ...values)
 }
 
-export function hr(...values: HValue[]) {
+export function hr(...values: HValues[]) {
     return h("hr", ...values)
 }
 
-export function i(...values: HValue[]) {
+export function i(...values: HValues[]) {
     return h("i", ...values)
 }
 
-export function iframe(...values: HValue[]) {
+export function iframe(...values: HValues[]) {
     return h("iframe", ...values)
 }
 
-export function img(...values: HValue[]) {
+export function img(...values: HValues[]) {
     return h("img", ...values)
 }
 
-export function input(...values: HValue[]) {
+export function input(...values: HValues[]) {
     return h("input", ...values)
 }
 
-export function ins(...values: HValue[]) {
+export function ins(...values: HValues[]) {
     return h("ins", ...values)
 }
 
-export function kbd(...values: HValue[]) {
+export function kbd(...values: HValues[]) {
     return h("kbd", ...values)
 }
 
-export function label(...values: HValue[]) {
+export function label(...values: HValues[]) {
     return h("label", ...values)
 }
 
-export function legend(...values: HValue[]) {
+export function legend(...values: HValues[]) {
     return h("legend", ...values)
 }
 
-export function li(...values: HValue[]) {
+export function li(...values: HValues[]) {
     return h("li", ...values)
 }
 
-export function main(...values: HValue[]) {
+export function main(...values: HValues[]) {
     return h("main", ...values)
 }
 
-export function map(...values: HValue[]) {
+export function map(...values: HValues[]) {
     return h("map", ...values)
 }
 
-export function mark(...values: HValue[]) {
+export function mark(...values: HValues[]) {
     return h("mark", ...values)
 }
 
-export function menu(...values: HValue[]) {
+export function menu(...values: HValues[]) {
     return h("menu", ...values)
 }
 
-export function menuitem(...values: HValue[]) {
+export function menuitem(...values: HValues[]) {
     return h("menuitem", ...values)
 }
 
-export function meter(...values: HValue[]) {
+export function meter(...values: HValues[]) {
     return h("meter", ...values)
 }
 
-export function nav(...values: HValue[]) {
+export function nav(...values: HValues[]) {
     return h("nav", ...values)
 }
 
-export function object(...values: HValue[]) {
+export function object(...values: HValues[]) {
     return h("object", ...values)
 }
 
-export function ol(...values: HValue[]) {
+export function ol(...values: HValues[]) {
     return h("ol", ...values)
 }
 
-export function optgroup(...values: HValue[]) {
+export function optgroup(...values: HValues[]) {
     return h("optgroup", ...values)
 }
 
-export function option(...values: HValue[]) {
+export function option(...values: HValues[]) {
     return h("option", ...values)
 }
 
-export function output(...values: HValue[]) {
+export function output(...values: HValues[]) {
     return h("output", ...values)
 }
 
-export function p(...values: HValue[]) {
+export function p(...values: HValues[]) {
     return h("p", ...values)
 }
 
-export function param(...values: HValue[]) {
+export function param(...values: HValues[]) {
     return h("param", ...values)
 }
 
-export function pre(...values: HValue[]) {
+export function pre(...values: HValues[]) {
     return h("pre", ...values)
 }
 
-export function progress(...values: HValue[]) {
+export function progress(...values: HValues[]) {
     return h("progress", ...values)
 }
 
-export function q(...values: HValue[]) {
+export function q(...values: HValues[]) {
     return h("q", ...values)
 }
 
-export function rp(...values: HValue[]) {
+export function rp(...values: HValues[]) {
     return h("rp", ...values)
 }
 
-export function rt(...values: HValue[]) {
+export function rt(...values: HValues[]) {
     return h("rt", ...values)
 }
 
-export function rtc(...values: HValue[]) {
+export function rtc(...values: HValues[]) {
     return h("rtc", ...values)
 }
 
-export function ruby(...values: HValue[]) {
+export function ruby(...values: HValues[]) {
     return h("ruby", ...values)
 }
 
-export function s(...values: HValue[]) {
+export function s(...values: HValues[]) {
     return h("s", ...values)
 }
 
-export function samp(...values: HValue[]) {
+export function samp(...values: HValues[]) {
     return h("samp", ...values)
 }
 
-export function section(...values: HValue[]) {
+export function section(...values: HValues[]) {
     return h("section", ...values)
 }
 
-export function select(...values: HValue[]) {
+export function select(...values: HValues[]) {
     return h("select", ...values)
 }
 
-export function small(...values: HValue[]) {
+export function small(...values: HValues[]) {
     return h("small", ...values)
 }
 
-export function source(...values: HValue[]) {
+export function source(...values: HValues[]) {
     return h("source", ...values)
 }
 
-export function span(...values: HValue[]) {
+export function span(...values: HValues[]) {
     return h("span", ...values)
 }
 
-export function strong(...values: HValue[]) {
+export function strong(...values: HValues[]) {
     return h("strong", ...values)
 }
 
-export function sub(...values: HValue[]) {
+export function sub(...values: HValues[]) {
     return h("sub", ...values)
 }
 
-export function summary(...values: HValue[]) {
+export function summary(...values: HValues[]) {
     return h("summary", ...values)
 }
 
-export function sup(...values: HValue[]) {
+export function sup(...values: HValues[]) {
     return h("sup", ...values)
 }
 
-export function svg(...values: HValue[]) {
+export function svg(...values: HValues[]) {
     return h("svg", ...values)
 }
 
-export function table(...values: HValue[]) {
+export function table(...values: HValues[]) {
     return h("table", ...values)
 }
 
-export function tbody(...values: HValue[]) {
+export function tbody(...values: HValues[]) {
     return h("tbody", ...values)
 }
 
-export function td(...values: HValue[]) {
+export function td(...values: HValues[]) {
     return h("td", ...values)
 }
 
-export function textarea(...values: HValue[]) {
+export function textarea(...values: HValues[]) {
     return h("textarea", ...values)
 }
 
-export function tfoot(...values: HValue[]) {
+export function tfoot(...values: HValues[]) {
     return h("tfoot", ...values)
 }
 
-export function th(...values: HValue[]) {
+export function th(...values: HValues[]) {
     return h("th", ...values)
 }
 
-export function thead(...values: HValue[]) {
+export function thead(...values: HValues[]) {
     return h("thead", ...values)
 }
 
-export function time(...values: HValue[]) {
+export function time(...values: HValues[]) {
     return h("time", ...values)
 }
 
-export function tr(...values: HValue[]) {
+export function tr(...values: HValues[]) {
     return h("tr", ...values)
 }
 
-export function track(...values: HValue[]) {
+export function track(...values: HValues[]) {
     return h("track", ...values)
 }
 
-export function u(...values: HValue[]) {
+export function u(...values: HValues[]) {
     return h("u", ...values)
 }
 
-export function ul(...values: HValue[]) {
+export function ul(...values: HValues[]) {
     return h("ul", ...values)
 }
 
-export function video(...values: HValue[]) {
+export function video(...values: HValues[]) {
     return h("video", ...values)
 }
 
-export function vvar(...values: HValue[]) {
+export function vvar(...values: HValues[]) {
     return h("vvar", ...values)
 }
 
-export function wbr(...values: HValue[]) {
+export function wbr(...values: HValues[]) {
     return h("wbr", ...values)
 }
 
