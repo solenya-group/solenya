@@ -8,9 +8,10 @@ Here's the [motivation](#motivation) for Solenya. But if you just want to learn 
 
 # Samples
 
-* Live editable samples for learning solenya: https://stackblitz.com/edit/solenya-samples
-* Same code as above, should you want to download from github & run locally: https://github.com/solenya-group/solenya-samples
-* Live editable mix of solenya code snippets, experiments, and web apps: https://stackblitz.com/@solenya-group
+* Live editable code samples for learning solenya: https://stackblitz.com/edit/solenya-samples
+  * Downloadable on github: https://github.com/solenya-group/solenya-samples
+  * Deployed on solenya.org: http://www.solenya.org/samples
+* Live editable mix of solenya code snippets, components, experiments, and web apps: https://stackblitz.com/@solenya-group
 * Github / npm supplemental solenya libraries: https://github.com/solenya-group
 
 # Contact
@@ -257,6 +258,7 @@ button (
     { onclick: () => this.add (1) }, "+"
 )
 ```
+To aid porting, an online HTML-to-Code converter is available on both [solenya.org](http://www.solenya.org/convert) and [stackblitz](https://convert.stackblitz.io/).
 
 # Style
 
