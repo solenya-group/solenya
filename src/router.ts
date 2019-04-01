@@ -1,12 +1,11 @@
 ﻿import { Component } from './component'
 import { HValue, a } from './html'
 import { Let, equalsIgnoreCase, isNullOrEmpty } from './util'
-import createHistory from "history/createBrowserHistory"
-import { Action } from "history"
+import { createBrowserHistory, Action } from "history"
 import { Exclude } from "class-transformer"
 import { VElement } from './dom'
 
-const history = createHistory()
+const history = createBrowserHistory()
 
 export interface IRouted extends Component
 {

@@ -1,6 +1,6 @@
 {
   "name": "solenya",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "author": "solenya",
   "license": "MIT",
   "repository": {
@@ -13,7 +13,7 @@
     "reflect-metadata": "^0.1.12",
     "class-transformer": "^0.2.0",
     "class-validator": "^0.9.1",
-    "history": "^4.7.2",
+    "history": "^4.9.0",
     "typestyle": "^2.0.1"
   }
 }
