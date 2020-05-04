@@ -8,11 +8,7 @@ Here's the [motivation](#motivation) for Solenya. But if you just want to learn 
 
 # Samples
 
-* Live editable code samples for learning solenya: https://stackblitz.com/edit/solenya-samples
-  * Downloadable on github: https://github.com/solenya-group/solenya-samples
-  * Deployed on solenya.org: http://www.solenya.org/samples
-* Live editable mix of solenya code snippets, components, experiments, and web apps: https://stackblitz.com/@solenya-group
-* Github / npm supplemental solenya libraries: https://github.com/solenya-group
+  * Solenya website: https://www.solenya.org
 
 # Contact
 
